@@ -7,25 +7,15 @@ const hasPdf = fs.existsSync(new URL('../../public/resume.pdf', import.meta.url)
 ---
 
 <Base title="Resume" description="Resume of Jerry Zhang.">
-  <h1>Resume</h1>
+  <h1 class="font-display text-[clamp(2.75rem,7vw,4.5rem)] font-bold tracking-[-0.04em]">Resume</h1>
   {hasPdf ? (
     <>
-      <p><a href="/resume.pdf">Download PDF</a></p>
-      <object data="/resume.pdf" type="application/pdf" class="pdf" aria-label="Resume PDF">
-        <p>Your browser can't display the PDF inline. <a href="/resume.pdf">Download it instead.</a></p>
+      <p class="mt-4 font-display text-base"><a href="/resume.pdf">Download PDF</a></p>
+      <object data="/resume.pdf" type="application/pdf" class="mt-8 h-[80vh] min-h-[32rem] w-full rounded-lg border border-line" aria-label="Resume PDF">
+        <p>This browser can't show the PDF inline. <a href="/resume.pdf">Download the PDF</a> instead.</p>
       </object>
     </>
   ) : (
-    <p class="muted">Resume coming soon.</p>
+    <p class="mt-4 text-muted">The resume isn't posted yet.</p>
   )}
 </Base>
-
-<style>
-  .pdf {
-    width: 100%;
-    height: 80vh;
-    min-height: 32rem;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-  }
-</style>

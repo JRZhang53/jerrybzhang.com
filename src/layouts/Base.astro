@@ -1,17 +1,19 @@
 ---
 import '../styles/global.css';
 import { SITE, NAV, LINKS } from '../data/site';
+import { MorphicNavbar } from '@/components/kokonutui/morphic-navbar';
+import ThemeToggle from '@/components/ThemeToggle';
 
 interface Props {
   title?: string;
   description?: string;
+  /** Let the page start edge to edge (the home hero), instead of inside the column. */
+  bleed?: boolean;
 }
 
-const { title, description = SITE.description } = Astro.props;
-const pageTitle = title ? `${title} · ${SITE.title}` : SITE.title;
+const { title, description = SITE.description, bleed = false } = Astro.props;
+const pageTitle = title ? `${title} | ${SITE.title}` : SITE.title;
 const canonical = new URL(Astro.url.pathname, Astro.site);
-const path = Astro.url.pathname;
-const isActive = (href: string) => (href === '/' ? path === '/' : path.startsWith(href));
 ---
 
 <!doctype html>
@@ -29,93 +31,42 @@ const isActive = (href: string) => (href === '/' ? path === '/' : path.startsWit
     <meta property="og:description" content={description} />
     <meta property="og:url" content={canonical} />
     <meta property="og:type" content="website" />
+    <script is:inline>
+      // Apply the saved or system theme before first paint, so there's no flash.
+      (() => {
+        let theme = null;
+        try { theme = localStorage.getItem('theme'); } catch {}
+        const dark = theme ? theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+        document.documentElement.classList.toggle('dark', dark);
+        document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
+      })();
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Newsreader:opsz,wght@6..72,400;6..72,500&family=JetBrains+Mono&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=IBM+Plex+Mono&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap"
       rel="stylesheet"
     />
   </head>
-  <body>
-    <header class="container site-header">
-      <a href="/" class="brand">{SITE.name}</a>
-      <nav>
-        {NAV.map((item) => (
-          <a href={item.href} aria-current={isActive(item.href) ? 'page' : undefined}>
-            {item.label}
-          </a>
-        ))}
-      </nav>
+  <body class="flex min-h-screen flex-col">
+    <header class="relative z-30 flex items-center justify-between gap-3 px-3 py-3 sm:px-6">
+      <a href="/" class="font-display text-lg font-semibold tracking-tight text-ink no-underline max-sm:sr-only">
+        {SITE.name}
+      </a>
+      <MorphicNavbar client:load items={NAV} pathname={Astro.url.pathname} className="px-0 py-0 font-display" />
+      <ThemeToggle client:load />
     </header>
 
-    <main class="container">
+    <main class:list={['flex-1', !bleed && 'mx-auto w-full max-w-5xl px-5 pt-14 sm:px-8 sm:pt-20']}>
       <slot />
     </main>
 
-    <footer class="container site-footer">
+    <footer class="mx-auto mt-28 flex w-full max-w-5xl flex-wrap justify-between gap-x-6 gap-y-2 border-t border-line px-5 pt-6 pb-12 font-display text-sm text-muted sm:px-8">
       <span>© {new Date().getFullYear()} {SITE.name}</span>
-      <span class="footer-links">
-        {LINKS.map((l) => <a href={l.href}>{l.label}</a>)}
-        <a href="/rss.xml">RSS</a>
+      <span class="flex gap-5">
+        {LINKS.map((l) => <a class="text-muted no-underline hover:text-ink" href={l.href}>{l.label}</a>)}
+        <a class="text-muted no-underline hover:text-ink" href="/rss.xml">RSS</a>
       </span>
     </footer>
   </body>
 </html>
-
-<style>
-  .site-header {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 0.75rem 1.5rem;
-    padding-top: 2.5rem;
-    padding-bottom: 3.5rem;
-  }
-  .brand {
-    font-family: 'Newsreader', Georgia, serif;
-    font-size: 1.35rem;
-    font-weight: 500;
-    color: var(--fg);
-    text-decoration: none;
-  }
-  nav {
-    display: flex;
-    gap: 1.25rem;
-    font-size: 0.95rem;
-  }
-  nav a {
-    color: var(--muted);
-    text-decoration: none;
-  }
-  nav a:hover,
-  nav a[aria-current='page'] {
-    color: var(--fg);
-  }
-  main {
-    min-height: 60vh;
-  }
-  .site-footer {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: space-between;
-    gap: 0.5rem 1rem;
-    margin-top: 5rem;
-    padding-top: 1.5rem;
-    padding-bottom: 3rem;
-    border-top: 1px solid var(--border);
-    font-size: 0.875rem;
-    color: var(--muted);
-  }
-  .footer-links {
-    display: flex;
-    gap: 1rem;
-  }
-  .footer-links a {
-    color: var(--muted);
-    text-decoration: none;
-  }
-  .footer-links a:hover {
-    color: var(--fg);
-  }
-</style>

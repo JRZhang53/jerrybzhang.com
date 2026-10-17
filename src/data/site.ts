@@ -1,10 +1,10 @@
-// Edit this file to update your name, tagline, and links across the whole site.
+// Edit this file to update your name, roles, and links across the whole site.
 export const SITE = {
   name: 'Jerry Zhang',
   title: 'Jerry Zhang',
   description: 'Personal website of Jerry Zhang.',
-  // TODO: replace with a one-line description of yourself.
-  tagline: 'Student, builder, and occasional writer.',
+  // TODO: the phrases typed out under your name on the home page.
+  roles: ['student.', 'builder.', 'occasional writer.'],
 };
 
 // Remove any link you don't want to show. Leave `href` empty to hide it.
@@ -14,9 +14,10 @@ export const LINKS = [
   { label: 'Email', href: '' }, // TODO: e.g. mailto:you@example.com
 ].filter((l) => l.href);
 
-export const NAV = [
-  { label: 'About', href: '/' },
-  { label: 'Projects', href: '/projects/' },
-  { label: 'Blog', href: '/blog/' },
-  { label: 'Resume', href: '/resume/' },
-];
+// Navigation, keyed by path, in display order.
+export const NAV = {
+  '/': { name: 'About' },
+  '/projects': { name: 'Projects' },
+  '/blog': { name: 'Writing' },
+  '/resume': { name: 'Resume' },
+};

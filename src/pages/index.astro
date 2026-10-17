@@ -1,5 +1,6 @@
 ---
 import Base from '../layouts/Base.astro';
+import Hero from '@/components/Hero';
 import { getCollection } from 'astro:content';
 import { SITE, LINKS } from '../data/site';
 import { PROJECTS } from '../data/projects';
@@ -11,87 +12,71 @@ const fmt = (d: Date) =>
   d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC' });
 ---
 
-<Base>
-  <section class="intro">
-    <!-- TODO: add a photo at public/me.jpg and uncomment the line below. -->
-    <!-- <img src="/me.jpg" alt="Jerry Zhang" class="avatar" width="96" height="96" /> -->
-    <h1>Hi, I'm {SITE.name.split(' ')[0]}.</h1>
-    <p class="lede">{SITE.tagline}</p>
-    <!-- TODO: replace these paragraphs with your own bio. -->
-    <p>
-      Write two or three sentences about yourself here: what you study or work on, what you're
-      curious about right now, and what you're looking for.
-    </p>
-    <p>
-      A second paragraph is a good place for the side projects, interests, or things outside work
-      that make you you.
-    </p>
-    {LINKS.length > 0 && (
-      <p class="links">
-        {LINKS.map((l) => <a href={l.href}>{l.label}</a>)}
-      </p>
-    )}
-  </section>
+<Base bleed>
+  <Hero client:load name={SITE.name} roles={SITE.roles} />
 
-  <section>
-    <h2>Selected projects</h2>
-    <ul class="list">
-      {PROJECTS.slice(0, 3).map((p) => (
-        <li>
-          {p.href ? <a href={p.href}>{p.name}</a> : <span>{p.name}</span>}
-          <span class="muted"> · {p.description}</span>
-        </li>
-      ))}
-    </ul>
-    <p><a href="/projects/">All projects →</a></p>
-  </section>
-
-  {posts.length > 0 && (
-    <section>
-      <h2>Recent writing</h2>
-      <ul class="list">
-        {posts.map((post) => (
-          <li class="post-row">
-            <a href={`/blog/${post.id}/`}>{post.data.title}</a>
-            <time class="muted" datetime={post.data.date.toISOString()}>{fmt(post.data.date)}</time>
-          </li>
-        ))}
-      </ul>
-      <p><a href="/blog/">All posts →</a></p>
+  <div class="mx-auto w-full max-w-5xl px-5 sm:px-8">
+    <section class="grid gap-x-12 gap-y-4 pt-10 md:grid-cols-[11rem_1fr]">
+      <h2 class="text-2xl md:pt-1">About</h2>
+      <div class="max-w-[38rem] space-y-5">
+        <!-- TODO: add a photo at public/me.jpg and uncomment the line below. -->
+        <!-- <img src="/me.jpg" alt="Jerry Zhang" class="size-24 rounded-full object-cover" width="96" height="96" /> -->
+        <!-- TODO: replace these paragraphs with your own bio. -->
+        <p>
+          Write two or three sentences about yourself here: what you study or work on, what you're
+          curious about right now, and what you're looking for.
+        </p>
+        <p>
+          A second paragraph is a good place for side projects, interests, or the things outside
+          work that make you you.
+        </p>
+        {LINKS.length > 0 && (
+          <p class="flex gap-5 font-display text-base">
+            {LINKS.map((l) => <a href={l.href}>{l.label}</a>)}
+          </p>
+        )}
+      </div>
     </section>
-  )}
-</Base>
 
-<style>
-  .avatar {
-    border-radius: 50%;
-    margin-bottom: 1.25rem;
-    object-fit: cover;
-  }
-  .lede {
-    font-size: 1.2rem;
-    color: var(--muted);
-    margin-top: 0;
-  }
-  .links {
-    display: flex;
-    gap: 1.25rem;
-  }
-  .list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-  }
-  .list li {
-    padding: 0.4rem 0;
-  }
-  .post-row {
-    display: flex;
-    justify-content: space-between;
-    gap: 1rem;
-  }
-  .post-row time {
-    font-size: 0.9rem;
-    white-space: nowrap;
-  }
-</style>
+    <section class="mt-24 grid gap-x-12 gap-y-4 md:grid-cols-[11rem_1fr]">
+      <h2 class="text-2xl md:pt-1">Projects</h2>
+      <div>
+        <ul class="divide-y divide-line border-y border-line">
+          {PROJECTS.slice(0, 3).map((p) => (
+            <li class="grid grid-cols-[1fr_auto] gap-x-6 py-4">
+              {p.href ? (
+                <a href={p.href} class="font-display text-xl font-semibold text-ink no-underline hover:text-accent">{p.name}</a>
+              ) : (
+                <span class="font-display text-xl font-semibold">{p.name}</span>
+              )}
+              {p.year && <span class="font-display text-sm text-muted tabular-nums">{p.year}</span>}
+              <p class="col-span-2 mt-1 text-base text-muted">{p.description}</p>
+            </li>
+          ))}
+        </ul>
+        <p class="mt-4 font-display text-base"><a href="/projects/">See all projects</a></p>
+      </div>
+    </section>
+
+    {posts.length > 0 && (
+      <section class="mt-24 grid gap-x-12 gap-y-4 md:grid-cols-[11rem_1fr]">
+        <h2 class="text-2xl md:pt-1">Writing</h2>
+        <div>
+          <ul class="divide-y divide-line border-y border-line">
+            {posts.map((post) => (
+              <li class="flex items-baseline justify-between gap-6 py-4">
+                <a href={`/blog/${post.id}/`} class="font-display text-xl font-semibold text-ink no-underline hover:text-accent">
+                  {post.data.title}
+                </a>
+                <time class="shrink-0 font-display text-sm text-muted tabular-nums" datetime={post.data.date.toISOString()}>
+                  {fmt(post.data.date)}
+                </time>
+              </li>
+            ))}
+          </ul>
+          <p class="mt-4 font-display text-base"><a href="/blog/">Read all posts</a></p>
+        </div>
+      </section>
+    )}
+  </div>
+</Base>

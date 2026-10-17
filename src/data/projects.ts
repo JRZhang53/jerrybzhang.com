@@ -11,8 +11,8 @@ export type Project = {
 export const PROJECTS: Project[] = [
   {
     name: 'jerrybzhang.com',
-    description: 'This website. Built with Astro and hosted on GitHub Pages.',
-    tags: ['Astro', 'TypeScript'],
+    description: 'This website. Built with Astro, Motion, and Kokonut UI, and hosted on GitHub Pages.',
+    tags: ['Astro', 'React', 'Tailwind CSS'],
     href: 'https://jerrybzhang.com',
     repo: 'https://github.com/JRZhang53/jerrybzhang.com',
     year: '2026',

@@ -1,18 +1,28 @@
 # jerrybzhang.com
 
-Personal website, built with [Astro](https://astro.build) and hosted on GitHub Pages.
+Personal website, built with [Astro](https://astro.build), [Motion](https://motion.dev), and [Kokonut UI](https://kokonutui.com), and hosted on GitHub Pages.
 
 ## Editing
 
 | What | Where |
 | --- | --- |
-| Name, tagline, social links | `src/data/site.ts` |
+| Name, typewriter phrases, social links, nav | `src/data/site.ts` |
 | Bio | `src/pages/index.astro` |
 | Projects | `src/data/projects.ts` |
 | Blog posts | `src/content/blog/*.md` (add a new `.md` file) |
 | Resume | Drop a PDF at `public/resume.pdf` |
 | Photo | Drop it at `public/me.jpg`, then uncomment the `<img>` in `src/pages/index.astro` |
-| Colors and fonts | `src/styles/global.css` |
+| Colors and fonts | `src/styles/global.css` (the `@theme` block) |
+| Home page hero animation | `src/components/Hero.tsx` |
+| Kokonut UI components | `src/components/kokonutui/` (adapted: site colors, plain links instead of Next.js) |
+
+## Adding Kokonut UI components
+
+```bash
+npx shadcn@latest add @kokonutui/<component-name>
+```
+
+Browse components at https://kokonutui.com. They are React components; use them in `.astro` pages with a `client:load` or `client:visible` directive so they run in the browser.
 
 ## Running locally
 
