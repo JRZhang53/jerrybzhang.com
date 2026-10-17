@@ -4,7 +4,7 @@ export const SITE = {
   title: 'Jerry Zhang',
   description: 'Personal website of Jerry Zhang.',
   // TODO: the phrases typed out under your name on the home page.
-  roles: ['student.', 'builder.', 'occasional writer.'],
+  roles: ['student.', 'occasional writer.'],
 };
 
 // Remove any link you don't want to show. Leave `href` empty to hide it.

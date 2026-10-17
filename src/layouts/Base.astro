@@ -1,7 +1,7 @@
 ---
 import '../styles/global.css';
 import { SITE, NAV, LINKS } from '../data/site';
-import { MorphicNavbar } from '@/components/kokonutui/morphic-navbar';
+import SiteNav from '@/components/SiteNav';
 import ThemeToggle from '@/components/ThemeToggle';
 
 interface Props {
@@ -49,12 +49,14 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
     />
   </head>
   <body class="flex min-h-screen flex-col">
-    <header class="relative z-30 flex items-center justify-between gap-3 px-3 py-3 sm:px-6">
+    <header class="relative z-30 mx-auto flex w-full max-w-5xl items-center justify-between gap-4 px-3 py-4 sm:px-8 sm:py-6">
       <a href="/" class="font-display text-lg font-semibold tracking-tight text-ink no-underline max-sm:sr-only">
         {SITE.name}
       </a>
-      <MorphicNavbar client:load items={NAV} pathname={Astro.url.pathname} className="px-0 py-0 font-display" />
-      <ThemeToggle client:load />
+      <div class="flex items-center gap-1 sm:-mr-3 sm:gap-2">
+        <SiteNav client:load items={NAV} pathname={Astro.url.pathname} />
+        <ThemeToggle client:load />
+      </div>
     </header>
 
     <main class:list={['flex-1', !bleed && 'mx-auto w-full max-w-5xl px-5 pt-14 sm:px-8 sm:pt-20']}>

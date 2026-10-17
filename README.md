@@ -14,7 +14,7 @@ Personal website, built with [Astro](https://astro.build), [Motion](https://moti
 | Photo | Drop it at `public/me.jpg`, then uncomment the `<img>` in `src/pages/index.astro` |
 | Colors and fonts | `src/styles/global.css` (the `@theme` block) |
 | Home page hero animation | `src/components/Hero.tsx` |
-| Kokonut UI components | `src/components/kokonutui/` (adapted: site colors, plain links instead of Next.js) |
+| Kokonut UI components | `src/components/kokonutui/` (adapted: site colors, theme toggle restyled to match) |
 
 ## Adding Kokonut UI components
 

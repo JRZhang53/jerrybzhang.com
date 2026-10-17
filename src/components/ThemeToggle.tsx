@@ -7,6 +7,7 @@ export default function ThemeToggle() {
       showLabel={false}
       size="sm"
       aria-label="Toggle dark mode"
+      className="border-transparent bg-transparent text-muted hover:border-transparent hover:bg-line/60 hover:text-ink"
       onThemeChange={(theme) => {
         try {
           localStorage.setItem('theme', theme);
