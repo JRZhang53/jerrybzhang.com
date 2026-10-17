@@ -1,12 +1,15 @@
 ---
 import Base from '../layouts/Base.astro';
 import fs from 'node:fs';
+import { EDUCATION, EXPERIENCE, HONORS, LANGUAGES } from '../data/resume';
+import { PROJECTS } from '../data/projects';
 
-// Drop your resume at public/resume.pdf and it will appear here automatically.
+// Drop your resume at public/resume.pdf and it replaces the summary below.
 const hasPdf = fs.existsSync(new URL('../../public/resume.pdf', import.meta.url));
+const research = PROJECTS.filter((p) => !p.href);
 ---
 
-<Base title="Resume" description="Resume of Jerry Zhang.">
+<Base title="Resume" description="Education, experience, research, and honors of Jerry Zhang.">
   <h1 class="font-display text-[clamp(2.75rem,7vw,4.5rem)] font-bold tracking-[-0.04em]">Resume</h1>
   {hasPdf ? (
     <>
@@ -16,6 +19,65 @@ const hasPdf = fs.existsSync(new URL('../../public/resume.pdf', import.meta.url)
       </object>
     </>
   ) : (
-    <p class="mt-4 text-muted">The resume isn't posted yet.</p>
+    <div class="mt-14 space-y-16">
+      <section class="grid gap-x-12 gap-y-4 md:grid-cols-[11rem_1fr]">
+        <h2 class="text-2xl md:pt-1">Education</h2>
+        <ul class="max-w-[38rem] space-y-3">
+          {EDUCATION.map((e) => (
+            <li class="flex flex-wrap items-baseline justify-between gap-x-6">
+              <span><span class="font-display text-xl font-semibold">{e.school}</span> <span class="text-muted">{e.detail}</span></span>
+              <span class="font-display text-sm text-muted tabular-nums">{e.years}</span>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section class="grid gap-x-12 gap-y-4 md:grid-cols-[11rem_1fr]">
+        <h2 class="text-2xl md:pt-1">Experience</h2>
+        <ul class="max-w-[38rem] space-y-3">
+          {EXPERIENCE.map((e) => (
+            <li class="flex flex-wrap items-baseline justify-between gap-x-6">
+              <span><span class="font-display text-xl font-semibold">{e.org}</span> <span class="text-muted">{e.role}</span></span>
+              {e.years && <span class="font-display text-sm text-muted tabular-nums">{e.years}</span>}
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section class="grid gap-x-12 gap-y-4 md:grid-cols-[11rem_1fr]">
+        <h2 class="text-2xl md:pt-1">Research</h2>
+        <div class="max-w-[38rem]">
+          <ul class="space-y-2">
+            {research.map((p) => (
+              <li class="flex items-baseline justify-between gap-6">
+                <span>{p.name}</span>
+                <span class="shrink-0 font-display text-sm text-muted tabular-nums">{p.year}</span>
+              </li>
+            ))}
+          </ul>
+          <p class="mt-4 font-display text-base"><a href="/projects/">Read the project summaries</a></p>
+        </div>
+      </section>
+
+      <section class="grid gap-x-12 gap-y-4 md:grid-cols-[11rem_1fr]">
+        <h2 class="text-2xl md:pt-1">Honors</h2>
+        <ul class="max-w-[38rem] space-y-3">
+          {HONORS.map((h) => (
+            <li>
+              <div class="flex items-baseline justify-between gap-6">
+                <span>{h.name}</span>
+                {h.year && <span class="shrink-0 font-display text-sm text-muted tabular-nums">{h.year}</span>}
+              </div>
+              {h.from && <p class="text-base text-muted">{h.from}</p>}
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section class="grid gap-x-12 gap-y-4 md:grid-cols-[11rem_1fr]">
+        <h2 class="text-2xl md:pt-1">Languages</h2>
+        <p class="max-w-[38rem]">{LANGUAGES.join(', ')}</p>
+      </section>
+    </div>
   )}
 </Base>

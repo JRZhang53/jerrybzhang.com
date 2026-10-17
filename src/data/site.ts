@@ -2,7 +2,7 @@
 export const SITE = {
   name: 'Jerry Zhang',
   title: 'Jerry Zhang',
-  description: 'Personal website of Jerry Zhang.',
+  description: 'Jerry Zhang is a Harvard undergraduate working on statistics and computational science.',
   // TODO: the phrases typed out under your name on the home page.
   roles: ['student.', 'occasional writer.'],
 };
@@ -10,7 +10,7 @@ export const SITE = {
 // Remove any link you don't want to show. Leave `href` empty to hide it.
 export const LINKS = [
   { label: 'GitHub', href: 'https://github.com/JRZhang53' },
-  { label: 'LinkedIn', href: '' }, // TODO: e.g. https://www.linkedin.com/in/your-handle
+  { label: 'LinkedIn', href: 'https://www.linkedin.com/in/jerryzhang53' },
   { label: 'Email', href: '' }, // TODO: e.g. mailto:you@example.com
 ].filter((l) => l.href);
 
