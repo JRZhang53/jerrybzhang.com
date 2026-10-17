@@ -2,7 +2,7 @@
 export const SITE = {
   name: 'Jerry Zhang',
   title: 'Jerry Zhang',
-  description: 'Jerry Zhang is a Harvard undergraduate working on statistics and computational science.',
+  description: 'Jerry Zhang studies physics and statistics at Harvard and is joining Hudson River Trading as an algorithm developer.',
   // TODO: the phrases typed out under your name on the home page.
   roles: ['student.', 'occasional writer.'],
 };

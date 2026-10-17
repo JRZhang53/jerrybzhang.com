@@ -24,9 +24,12 @@ const research = PROJECTS.filter((p) => !p.href);
         <h2 class="text-2xl md:pt-1">Education</h2>
         <ul class="max-w-[38rem] space-y-3">
           {EDUCATION.map((e) => (
-            <li class="flex flex-wrap items-baseline justify-between gap-x-6">
-              <span><span class="font-display text-xl font-semibold">{e.school}</span> <span class="text-muted">{e.detail}</span></span>
-              <span class="font-display text-sm text-muted tabular-nums">{e.years}</span>
+            <li>
+              <div class="flex items-baseline justify-between gap-6">
+                <span class="font-display text-xl font-semibold">{e.school}</span>
+                <span class="shrink-0 font-display text-sm text-muted tabular-nums">{e.years}</span>
+              </div>
+              {e.detail && <p class="text-base text-muted">{e.detail}</p>}
             </li>
           ))}
         </ul>
@@ -34,18 +37,35 @@ const research = PROJECTS.filter((p) => !p.href);
 
       <section class="grid gap-x-12 gap-y-4 md:grid-cols-[11rem_1fr]">
         <h2 class="text-2xl md:pt-1">Experience</h2>
-        <ul class="max-w-[38rem] space-y-3">
+        <ul class="max-w-[38rem] space-y-9">
           {EXPERIENCE.map((e) => (
-            <li class="flex flex-wrap items-baseline justify-between gap-x-6">
-              <span><span class="font-display text-xl font-semibold">{e.org}</span> <span class="text-muted">{e.role}</span></span>
-              {e.years && <span class="font-display text-sm text-muted tabular-nums">{e.years}</span>}
+            <li>
+              <p class="font-display text-xl font-semibold">
+                {e.org}
+                {e.place && <span class="ml-2 font-display text-sm font-normal text-muted">{e.place}</span>}
+              </p>
+              <ul class="mt-2 space-y-4">
+                {e.roles.map((r) => (
+                  <li>
+                    <div class="flex items-baseline justify-between gap-6">
+                      <span class="italic">{r.title}</span>
+                      <span class="shrink-0 font-display text-sm text-muted tabular-nums">{r.years}</span>
+                    </div>
+                    {r.points && (
+                      <ul class="mt-1.5 list-disc space-y-1 pl-5 text-base marker:text-muted">
+                        {r.points.map((p) => <li>{p}</li>)}
+                      </ul>
+                    )}
+                  </li>
+                ))}
+              </ul>
             </li>
           ))}
         </ul>
       </section>
 
       <section class="grid gap-x-12 gap-y-4 md:grid-cols-[11rem_1fr]">
-        <h2 class="text-2xl md:pt-1">Research</h2>
+        <h2 class="text-2xl md:pt-1">Projects</h2>
         <div class="max-w-[38rem]">
           <ul class="space-y-2">
             {research.map((p) => (
