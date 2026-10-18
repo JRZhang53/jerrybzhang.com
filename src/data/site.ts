@@ -1,10 +1,19 @@
-// Edit this file to update your name, roles, and links across the whole site.
+// Edit this file to update your name, interests, and links across the whole site.
 export const SITE = {
   name: 'Jerry Zhang',
   title: 'Jerry Zhang',
   description: 'Jerry Zhang studies physics and statistics at Harvard and is joining Hudson River Trading as an algorithm developer.',
-  // TODO: the phrases typed out under your name on the home page.
-  roles: ['student.', 'occasional writer.'],
+  // The line under your name on the home page: the lead-in, then each phrase typed out in turn.
+  lead: 'Interested in',
+  interests: [
+    'statistical physics.',
+    'dynamics and active matter.',
+    'materials and energy.',
+    'semiconductors and photonics.',
+    'information theory.',
+    'machine learning.',
+    'interpretability.',
+  ],
 };
 
 // Remove any link you don't want to show. Leave `href` empty to hide it.

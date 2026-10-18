@@ -4,13 +4,15 @@ import TypewriterTitle from '@/components/kokonutui/type-writer';
 
 interface HeroProps {
   name: string;
-  /** Phrases the typewriter cycles through under the name. */
-  roles: string[];
+  /** Lead-in shown before the typed phrases, e.g. "Interested in". */
+  lead: string;
+  /** Phrases the typewriter cycles through after the lead-in. */
+  phrases: string[];
 }
 
 // The one orchestrated moment on the site: the ribbon draws in, the name rises,
-// then the typewriter starts on the roles.
-export default function Hero({ name, roles }: HeroProps) {
+// then the typewriter starts on the phrases.
+export default function Hero({ name, lead, phrases }: HeroProps) {
   const reduce = useReducedMotion();
   const rise = (delay: number) =>
     reduce
@@ -36,16 +38,20 @@ export default function Hero({ name, roles }: HeroProps) {
         >
           {name}
         </motion.h1>
-        <motion.div className="mt-6" {...rise(0.6)}>
+        <motion.p
+          className="mt-6 flex flex-col font-display sm:flex-row sm:items-baseline sm:gap-x-[0.3em] text-[clamp(1.35rem,3.2vw,2rem)] font-medium leading-snug"
+          {...rise(0.6)}
+        >
+          <span className="text-muted">{lead}</span>
           <TypewriterTitle
-            as="p"
-            className="justify-start"
-            textClassName="font-display text-[clamp(1.35rem,3.2vw,2rem)] font-medium text-muted leading-snug @lg:text-[clamp(1.35rem,3.2vw,2rem)] @2xl:text-[clamp(1.35rem,3.2vw,2rem)]"
-            sequences={roles.map((text) => ({ text, deleteAfter: true, pauseAfter: 1800 }))}
+            as="span"
+            className="w-auto justify-start"
+            textClassName="text-ink text-[length:inherit] leading-snug @lg:text-[length:inherit] @2xl:text-[length:inherit]"
+            sequences={phrases.map((text) => ({ text, deleteAfter: true, pauseAfter: 1800 }))}
             startDelay={1400}
-            typingSpeed={55}
+            typingSpeed={50}
           />
-        </motion.div>
+        </motion.p>
       </div>
     </BackgroundPaths>
   );

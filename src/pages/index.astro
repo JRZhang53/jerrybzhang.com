@@ -13,7 +13,7 @@ const fmt = (d: Date) =>
 ---
 
 <Base bleed>
-  <Hero client:load name={SITE.name} roles={SITE.roles} />
+  <Hero client:load name={SITE.name} lead={SITE.lead} phrases={SITE.interests} />
 
   <div class="mx-auto w-full max-w-5xl px-5 sm:px-8">
     <section class="grid gap-x-12 gap-y-4 pt-10 md:grid-cols-[11rem_1fr]">
@@ -22,9 +22,9 @@ const fmt = (d: Date) =>
         <!-- TODO: add a photo at public/me.jpg and uncomment the line below. -->
         <!-- <img src="/me.jpg" alt="Jerry Zhang" class="size-24 rounded-full object-cover" width="96" height="96" /> -->
         <p>
-          I study physics and statistics at Harvard (class of 2027). I'm drawn to statistical
-          physics and dynamics, materials and energy, and the information-theory and
-          interpretability side of machine learning. After graduation I'm joining
+          I study physics and statistics at Harvard (class of 2027). I'm interested in statistical
+          physics, dynamics, and active matter; materials and energy, semiconductors, and photonics;
+          and information theory, machine learning, and interpretability. After graduation I'm joining
           <a href="https://www.hudsonrivertrading.com">Hudson River Trading</a> as an algorithm developer.
         </p>
         <p>

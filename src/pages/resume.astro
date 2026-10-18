@@ -6,7 +6,6 @@ import { PROJECTS } from '../data/projects';
 
 // Drop your resume at public/resume.pdf and it replaces the summary below.
 const hasPdf = fs.existsSync(new URL('../../public/resume.pdf', import.meta.url));
-const research = PROJECTS.filter((p) => !p.href);
 ---
 
 <Base title="Resume" description="Education, experience, research, and honors of Jerry Zhang.">
@@ -68,7 +67,7 @@ const research = PROJECTS.filter((p) => !p.href);
         <h2 class="text-2xl md:pt-1">Projects</h2>
         <div class="max-w-[38rem]">
           <ul class="space-y-2">
-            {research.map((p) => (
+            {PROJECTS.map((p) => (
               <li class="flex items-baseline justify-between gap-6">
                 <span>{p.name}</span>
                 <span class="shrink-0 font-display text-sm text-muted tabular-nums">{p.year}</span>

@@ -59,12 +59,4 @@ export const PROJECTS: Project[] = [
     tags: ['Molecular dynamics', 'Materials'],
     year: '2023',
   },
-  {
-    name: 'jerrybzhang.com',
-    description: 'This website. Built with Astro, Motion, and Kokonut UI, and hosted on GitHub Pages.',
-    tags: ['Astro', 'React', 'Tailwind CSS'],
-    href: 'https://jerrybzhang.com',
-    repo: 'https://github.com/JRZhang53/jerrybzhang.com',
-    year: '2026',
-  },
 ];
