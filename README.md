@@ -14,7 +14,7 @@ Personal website, built with [Astro](https://astro.build), [Motion](https://moti
 | Resume | Drop a PDF at `public/resume.pdf` |
 | Photo | Drop it at `public/me.jpg`, then uncomment the `<img>` in `src/pages/index.astro` |
 | Colors and fonts | `src/styles/global.css` (the `@theme` block) |
-| Home page hero animation | `src/components/Hero.tsx` |
+| Home page hero | `src/components/Hero.tsx`. Each typed interest in `src/data/site.ts` picks a background simulation (`spins`, `swarm`, `waveguide`, `boltzmann`), defined in `src/components/interest-field/sims.ts`. |
 | Kokonut UI components | `src/components/kokonutui/` (adapted: site colors, theme toggle restyled to match) |
 
 ## Adding Kokonut UI components

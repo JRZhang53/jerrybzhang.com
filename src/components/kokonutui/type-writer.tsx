@@ -55,6 +55,8 @@ interface TypewriterTitleProps {
   className?: string;
   /** Classes for the text itself, e.g. to fix the font size. */
   textClassName?: string;
+  /** Called with a phrase's index as it starts being typed (or shown, with reduced motion). */
+  onPhraseStart?: (index: number) => void;
 }
 
 const DEFAULT_SEQUENCES: TypewriterSequence[] = [
@@ -160,6 +162,7 @@ export default function TypewriterTitle({
   as: Component = "div",
   className,
   textClassName,
+  onPhraseStart,
 }: TypewriterTitleProps) {
   const [screen, setScreen] = useState<Screen>({ text: "", selected: 0 });
   const ref = useRef<HTMLSpanElement>(null);
@@ -169,6 +172,11 @@ export default function TypewriterTitle({
   const shouldReduceMotion = useReducedMotion();
   const position = useRef<Position>({ sequence: 0, char: 0, deleting: false });
   const random = useRef<() => number>(createRandom(seed));
+
+  const onPhraseStartRef = useRef(onPhraseStart);
+  useEffect(() => {
+    onPhraseStartRef.current = onPhraseStart;
+  }, [onPhraseStart]);
 
   const sequencesRef = useRef(sequences);
   useEffect(() => {
@@ -185,6 +193,7 @@ export default function TypewriterTitle({
   useEffect(() => {
     if (shouldReduceMotion) {
       setScreen({ text: finalText, selected: 0 });
+      onPhraseStartRef.current?.(sequencesRef.current.length - 1);
     }
   }, [shouldReduceMotion, finalText]);
 
@@ -316,6 +325,9 @@ export default function TypewriterTitle({
       show(text.slice(0, pos.char));
 
       if (!pos.deleting) {
+        if (pos.char === 0) {
+          onPhraseStartRef.current?.(pos.sequence);
+        }
         while (pos.char < text.length) {
           await typeChar(text);
         }

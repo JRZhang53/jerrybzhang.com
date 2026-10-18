@@ -123,3 +123,20 @@
   aspect-ratio: 16 / 9;
   height: auto;
 }
+
+/* Home hero simulation: fades out at the top and bottom, and stays quiet
+   behind the name on the left so the text reads clearly. */
+.interest-field {
+  mask-image:
+    linear-gradient(to bottom, transparent, #000 14%, #000 80%, transparent),
+    linear-gradient(to right, rgb(0 0 0 / 0.22), rgb(0 0 0 / 0.32) 36%, #000 70%);
+  mask-composite: intersect;
+  -webkit-mask-composite: source-in;
+}
+@media (max-width: 767px) {
+  .interest-field {
+    mask-image:
+      linear-gradient(to bottom, transparent, #000 14%, #000 80%, transparent),
+      linear-gradient(rgb(0 0 0 / 0.38), rgb(0 0 0 / 0.38));
+  }
+}
