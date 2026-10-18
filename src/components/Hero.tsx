@@ -25,8 +25,16 @@ const EASE = [0.22, 1, 0.36, 1] as const;
 export default function Hero({ name, lead, interests }: HeroProps) {
   const reduce = useReducedMotion();
   const [index, setIndex] = useState(0);
+  // Pausing holds the current interest (the simulation keeps running and stays
+  // interactive). Resuming starts a fresh typewriter at the next interest.
   const [paused, setPaused] = useState(false);
+  const [run, setRun] = useState({ id: 0, startAt: 0 });
   const sim = interests[index]?.sim ?? interests[0].sim;
+
+  const togglePaused = () => {
+    if (paused) setRun({ id: run.id + 1, startAt: (index + 1) % interests.length });
+    setPaused(!paused);
+  };
 
   const rise = (delay: number) =>
     reduce
@@ -38,7 +46,7 @@ export default function Hero({ name, lead, interests }: HeroProps) {
         };
 
   return (
-    <InterestField className="min-h-[clamp(440px,64vh,640px)]" paused={paused} sim={sim}>
+    <InterestField className="min-h-[clamp(440px,64vh,640px)]" sim={sim} variant={sim === 'boltzmann' ? index : 0}>
       <div className="relative mx-auto w-full max-w-5xl px-5 text-ink sm:px-8">
         <motion.h1
           className="font-display text-[clamp(3.25rem,11vw,7.5rem)] font-bold leading-[0.92] tracking-[-0.045em]"
@@ -51,16 +59,21 @@ export default function Hero({ name, lead, interests }: HeroProps) {
           {...rise(0.6)}
         >
           <span className="text-muted">{lead}</span>
-          <TypewriterTitle
-            as="span"
-            className="w-auto justify-start"
-            onPhraseStart={setIndex}
-            paused={paused}
-            sequences={interests.map(({ text }) => ({ text, deleteAfter: true, pauseAfter: 2600 }))}
-            startDelay={1400}
-            textClassName="text-ink text-[length:inherit] leading-snug @lg:text-[length:inherit] @2xl:text-[length:inherit]"
-            typingSpeed={50}
-          />
+          {paused ? (
+            <span className="text-ink">{interests[index]?.text}</span>
+          ) : (
+            <TypewriterTitle
+              as="span"
+              className="w-auto justify-start"
+              key={run.id}
+              onPhraseStart={setIndex}
+              sequences={interests.map(({ text }) => ({ text, deleteAfter: true, pauseAfter: 2600 }))}
+              startAt={run.startAt}
+              startDelay={run.id === 0 ? 1400 : 250}
+              textClassName="text-ink text-[length:inherit] leading-snug @lg:text-[length:inherit] @2xl:text-[length:inherit]"
+              typingSpeed={50}
+            />
+          )}
         </motion.p>
       </div>
 
@@ -80,9 +93,10 @@ export default function Hero({ name, lead, interests }: HeroProps) {
           </AnimatePresence>
           {!reduce && (
             <button
-              aria-label={paused ? 'Play the animation' : 'Pause the animation'}
+              aria-label={paused ? 'Move on to the next interest' : 'Stay on this interest'}
               className="flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-md text-muted transition-colors hover:bg-line/60 hover:text-ink"
-              onClick={() => setPaused((p) => !p)}
+              onClick={togglePaused}
+              title={paused ? 'Move on to the next interest' : 'Stay on this interest'}
               type="button"
             >
               {paused ? <Play size={13} strokeWidth={2.5} /> : <Pause size={13} strokeWidth={2.5} />}

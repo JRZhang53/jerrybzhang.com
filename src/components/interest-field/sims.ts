@@ -26,8 +26,8 @@ const rightBias = (width: number) => (width >= 768 ? 0.42 : 0.06);
 // Ising model: Metropolis updates on a square lattice near the critical
 // temperature, where domains of every size form and dissolve. Updates run
 // slowly and each cell fades between states, so nothing flickers. The pointer
-// is a magnetic field: spins under it align, leaving a trail that slowly
-// melts back into the domains.
+// is a heat source: spins under it get hot and flip at random, melting the
+// domains there; once it moves on, order slowly returns.
 
 const T_BASE = 2.3;
 /** Lattice sweeps per second. Slow on purpose: domains drift rather than churn. */
@@ -35,8 +35,8 @@ const SWEEPS_PER_SECOND = 1.4;
 /** How fast a cell's drawn state follows its spin (per second). Low = gentle fades. */
 const FADE_RATE = 3.5;
 const LEVELS = 8;
-/** Field strength at the pointer, in units of the coupling J. */
-const FIELD = 6;
+/** Extra temperature at the pointer's center, in units of J/k. */
+const HEAT = 9;
 
 export class SpinLattice implements Sim {
   private cols = 0;
@@ -47,8 +47,8 @@ export class SpinLattice implements Sim {
   private shown = new Float32Array(0);
   private boltz = { 4: 0, 8: 0 } as Record<number, number>;
   private pending = 0;
-  /** Where the field is, and how visible its ring is (eases in and out). */
-  private magnet = { x: 0, y: 0, shown: 0 };
+  /** Where the heat is, and how visible its ring is (eases in and out). */
+  private heater = { x: 0, y: 0, shown: 0 };
 
   resize(width: number, height: number) {
     this.cell = clamp(Math.round(width / 95), 10, 15);
@@ -62,8 +62,8 @@ export class SpinLattice implements Sim {
     this.shown = Float32Array.from(this.spins);
   }
 
-  /** One Metropolis attempt at cell (x, y), with field `h` pushing spins up. */
-  private attempt(x: number, y: number, h: number) {
+  /** One Metropolis attempt at cell (x, y), at temperature `temp`. */
+  private attempt(x: number, y: number, temp: number) {
     const { cols, rows, spins } = this;
     const i = y * cols + x;
     const s = spins[i];
@@ -72,17 +72,17 @@ export class SpinLattice implements Sim {
       spins[y * cols + ((x - 1 + cols) % cols)] +
       spins[((y + 1) % rows) * cols + x] +
       spins[((y - 1 + rows) % rows) * cols + x];
-    const dE = 2 * s * (sum + h);
-    if (dE <= 0 || Math.random() < (h === 0 ? this.boltz[dE] : Math.exp(-dE / T_BASE))) {
+    const dE = 2 * s * sum;
+    if (dE <= 0 || Math.random() < (temp === T_BASE ? this.boltz[dE] : Math.exp(-dE / temp))) {
       spins[i] = -s as -1 | 1;
     }
   }
 
-  private fieldAt(x: number, y: number, pointer: Pointer | null) {
-    if (!pointer?.active) return 0;
+  private tempAt(x: number, y: number, pointer: Pointer | null) {
+    if (!pointer?.active) return T_BASE;
     const radius = 5 * this.cell;
     const d = Math.hypot((x + 0.5) * this.cell - pointer.x, (y + 0.5) * this.cell - pointer.y);
-    return d < radius ? FIELD * (1 - d / radius) : 0;
+    return d < radius ? T_BASE + HEAT * (1 - d / radius) : T_BASE;
   }
 
   private sweep(fraction: number, pointer: Pointer | null) {
@@ -92,11 +92,11 @@ export class SpinLattice implements Sim {
       const i = (Math.random() * n) | 0;
       const x = i % this.cols;
       const y = (i / this.cols) | 0;
-      this.attempt(x, y, this.fieldAt(x, y, pointer));
+      this.attempt(x, y, this.tempAt(x, y, pointer));
     }
   }
 
-  /** Extra updates right around the pointer, so the field acts at once. */
+  /** Extra updates right around the pointer, so the heat acts at once. */
   private sweepNear(pointer: Pointer, count: number) {
     const reach = 5;
     const cx = Math.floor(pointer.x / this.cell);
@@ -105,7 +105,7 @@ export class SpinLattice implements Sim {
       const x = cx + Math.round((Math.random() * 2 - 1) * reach);
       const y = cy + Math.round((Math.random() * 2 - 1) * reach);
       if (x < 0 || y < 0 || x >= this.cols || y >= this.rows) continue;
-      this.attempt(x, y, this.fieldAt(x, y, pointer));
+      this.attempt(x, y, this.tempAt(x, y, pointer));
     }
   }
 
@@ -118,11 +118,11 @@ export class SpinLattice implements Sim {
       this.pending -= whole;
     }
     if (pointer.active) {
-      this.sweepNear(pointer, Math.round(dt * 2400));
-      this.magnet.x = pointer.x;
-      this.magnet.y = pointer.y;
+      this.sweepNear(pointer, Math.round(dt * 1500));
+      this.heater.x = pointer.x;
+      this.heater.y = pointer.y;
     }
-    this.magnet.shown += ((pointer.active ? 1 : 0) - this.magnet.shown) * (1 - Math.exp(-dt * 6));
+    this.heater.shown += ((pointer.active ? 1 : 0) - this.heater.shown) * (1 - Math.exp(-dt * 6));
     const ease = 1 - Math.exp(-dt * FADE_RATE);
     const { shown, spins } = this;
     for (let i = 0; i < shown.length; i++) shown[i] += (spins[i] - shown[i]) * ease;
@@ -146,13 +146,13 @@ export class SpinLattice implements Sim {
         }
       }
     }
-    // A faint ring marks the field's reach, so the cursor reads as a magnet.
-    if (this.magnet.shown > 0.01) {
+    // A faint ring marks how far the heat reaches.
+    if (this.heater.shown > 0.01) {
       ctx.strokeStyle = rgb(color);
       ctx.lineWidth = 1.5;
-      ctx.globalAlpha = 0.5 * this.magnet.shown;
+      ctx.globalAlpha = 0.5 * this.heater.shown;
       ctx.beginPath();
-      ctx.arc(this.magnet.x, this.magnet.y, 5 * cell, 0, Math.PI * 2);
+      ctx.arc(this.heater.x, this.heater.y, 5 * cell, 0, Math.PI * 2);
       ctx.stroke();
     }
     ctx.globalAlpha = 1;
@@ -270,298 +270,251 @@ export class Swarm implements Sim {
 }
 
 // ---------------------------------------------------------------------------
-// Photonic circuit: a small chip layout. Light enters through a grating
-// coupler, splits at a Y-branch, and runs along two buses past add-drop ring
-// resonators, a directional coupler, and an all-pass ring. Each ring's
-// resonance drifts slowly; on resonance (a Lorentzian line) it pulls light out
-// of the bus into its drop port. Hovering a ring heats it onto resonance.
-// Brightness follows smoothed optical power, so nothing strobes; small dots
-// drift along each guide to show which way light flows.
+// Coupled waveguides: six parallel guides whose spacing changes along the
+// chip. Where neighbors run close, light tunnels between them (coupled-mode
+// theory: each guide carries a complex amplitude, and da/dz = i·K(z)·a).
+// Sections: a tight array (discrete diffraction), directional-coupler pairs,
+// then a shifted pairing. Light enters two guides with a slowly drifting
+// balance and phase, so the interference pattern downstream keeps changing.
+// The pointer is a heater: it shifts the phase of the guide under it.
+// Brightness is the steady intensity |a|², with a slow, faint ripple riding on
+// the wave's phase to show it travelling. Nothing strobes.
 
-type Pt = [number, number];
+const GUIDES = 6;
+/** Center spacing (px) where guides couple strongly. */
+const TIGHT = 13;
+/** Coupling (per px) at TIGHT spacing, and how fast it fades with distance. */
+const KAPPA = 0.012;
+const KAPPA_FADE = 4.5;
+/** Spatial frequency of the drawn ripple (crest every ~26 px). */
+const BETA = (2 * Math.PI) / 26;
+const RIPPLE_HZ = 0.45;
+const RIPPLE_DEPTH = 0.2;
+/** Extra phase per px under the heater; ~π across its width. */
+const HEATER_SHIFT = 0.075;
+const HEATER_WIDTH = 26;
+const STEP = 2;
 
-/** Sample a straight line from a to b. */
-function line(a: Pt, b: Pt, step = 6): Pt[] {
-  const n = Math.max(1, Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) / step));
-  return Array.from({ length: n + 1 }, (_, i) => [a[0] + ((b[0] - a[0]) * i) / n, a[1] + ((b[1] - a[1]) * i) / n] as Pt);
-}
+type Layout = number[];
 
-/** Sample a smooth S-bend from a to b (cosine easing in y). */
-function sbend(a: Pt, b: Pt, step = 4): Pt[] {
-  const n = Math.max(2, Math.ceil(Math.abs(b[0] - a[0]) / step));
-  return Array.from({ length: n + 1 }, (_, i) => {
-    const t = i / n;
-    return [a[0] + (b[0] - a[0]) * t, a[1] + ((b[1] - a[1]) * (1 - Math.cos(Math.PI * t))) / 2] as Pt;
-  });
-}
-
-/** Join path pieces, dropping each piece's duplicated first point. */
-function path(...pieces: Pt[][]): Pt[] {
-  return pieces.flatMap((p, i) => (i === 0 ? p : p.slice(1)));
-}
-
-interface Guide {
-  pts: Pt[];
-  /** Cumulative length at each point, for placing flow dots. */
-  len: number[];
-  /** Power carried, 0..1, eased toward its target. */
-  shown: number;
-  target: number;
-}
-
-interface Ring {
-  x: number;
-  y: number;
-  r: number;
-  /** Resonance drift: detuning = amp * sin(2π t / period + phase). */
-  period: number;
-  phase: number;
-  /** Current detuning, in linewidths, eased toward its target. */
-  detune: number;
-  /** Fraction of incoming light the ring takes (Lorentzian in detuning). */
-  take: number;
-  /** Light circulating in the ring, 0..1, eased. */
-  glow: number;
-  hovered: boolean;
-}
-
-const FLOW_SPEED = 46;
-const DOT_SPACING = 30;
-const DRIFT_AMPLITUDE = 4.5;
-const POWER_RATE = 3;
-
-export class PhotonicCircuit implements Sim {
-  private guides: Record<string, Guide> = {};
-  private rings: Ring[] = [];
-  private couplers: { at: Pt; out: boolean; guide: string }[] = [];
-  private t = 0;
-  private hoverRadius = 30;
+export class CoupledWaveguides implements Sim {
+  private xs: number[] = [];
+  /** ys[i][n]: guide n's height at sample i. */
+  private ys: number[][] = [];
+  /** kap[i][n]: coupling between guides n and n+1 at sample i. */
+  private kap: number[][] = [];
+  /** Field at each sample: re[i][n], im[i][n]. */
+  private re: number[][] = [];
+  private im: number[][] = [];
+  private t = Math.random() * 60;
+  private heater = { x: 0, guide: -1, amount: 0 };
+  private balancePeriod = 10 + Math.random() * 4;
+  private phasePeriod = 12 + Math.random() * 5;
 
   resize(width: number, height: number) {
     const wide = width >= 768;
-    // Wide screens: keep the whole chip clear of the name on the left.
-    const L = wide ? width * 0.56 : width * 0.08;
+    const L = wide ? width * 0.56 : width * 0.06;
     const R = width * 0.97;
-    const T = height * (wide ? 0.13 : 0.1);
-    const B = height * (wide ? 0.86 : 0.9);
-    const X = (u: number) => L + (R - L) * u;
-    const Y = (v: number) => T + (B - T) * v;
-    // Rings shrink on narrow screens so neighbouring parts don't collide.
-    const r = clamp(Math.min((B - T) * 0.085, (R - L) * 0.05), 9, 26);
-    const bendLength = clamp(r * 3, 24, 60);
-    const gap = 4;
-    this.hoverRadius = r * 1.9;
+    const mid = height * (wide ? 0.5 : 0.52);
+    const far = clamp((height * (wide ? 0.72 : 0.62)) / 6.5, 16, 52);
 
-    const inY = Y(0.5);
-    const upY = Y(0.34);
-    const lowY = Y(0.72);
-    const ring1: Pt = [X(0.42), upY - gap - r];
-    const ring2: Pt = [X(0.66), upY - gap - r];
-    const ring3: Pt = [X(0.86), lowY + gap + r];
-    const drop1Y = ring1[1] - r - gap;
-    const drop2Y = ring2[1] - r - gap;
-    const crossY = lowY + gap + 1.5;
-
-    const g = (pts: Pt[]): Guide => {
-      const len = [0];
-      for (let i = 1; i < pts.length; i++) len.push(len[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
-      return { pts, len, shown: 0, target: 0 };
-    };
-
-    this.guides = {
-      input: g(line([X(0), inY], [X(0.1), inY])),
-      splitUp: g(sbend([X(0.1), inY], [X(0.24), upY])),
-      splitDown: g(sbend([X(0.1), inY], [X(0.24), lowY])),
-      upA: g(line([X(0.24), upY], [ring1[0], upY])),
-      upB: g(line([ring1[0], upY], [ring2[0], upY])),
-      upC: g(line([ring2[0], upY], [X(1), upY])),
-      drop1Stub: g(line([ring1[0] - r * 1.8, drop1Y], [ring1[0], drop1Y])),
-      drop1: g(
-        path(
-          line([ring1[0], drop1Y], [ring1[0] + r * 1.6, drop1Y]),
-          sbend([ring1[0] + r * 1.6, drop1Y], [ring1[0] + r * 1.6 + bendLength, Y(0.02)]),
-          line([ring1[0] + r * 1.6 + bendLength, Y(0.02)], [X(1), Y(0.02)])
-        )
-      ),
-      drop2Stub: g(line([ring2[0] - r * 1.8, drop2Y], [ring2[0], drop2Y])),
-      drop2: g(line([ring2[0], drop2Y], [X(1), drop2Y])),
-      lowA: g(line([X(0.24), lowY], [X(0.44), lowY])),
-      lowCoupler: g(line([X(0.44), lowY], [X(0.58), lowY])),
-      lowB: g(line([X(0.58), lowY], [ring3[0], lowY])),
-      lowC: g(line([ring3[0], lowY], [X(1), lowY])),
-      crossIn: g(path(line([X(0.3), Y(0.99)], [X(0.32), Y(0.99)]), sbend([X(0.32), Y(0.99)], [X(0.44), crossY]))),
-      crossCoupler: g(line([X(0.44), crossY], [X(0.58), crossY])),
-      crossOut: g(path(sbend([X(0.58), crossY], [X(0.7), Y(0.99)]), line([X(0.7), Y(0.99)], [X(1), Y(0.99)]))),
-    };
-
-    // Keep each ring's drift when resizing, so the light doesn't jump.
-    const old = this.rings;
-    this.rings = [ring1, ring2, ring3].map(([x, y], i) => ({
-      x,
-      y,
-      r,
-      period: old[i]?.period ?? 7 + Math.random() * 4,
-      phase: old[i]?.phase ?? Math.random() * Math.PI * 2,
-      detune: old[i]?.detune ?? DRIFT_AMPLITUDE,
-      take: old[i]?.take ?? 0,
-      glow: old[i]?.glow ?? 0,
-      hovered: false,
-    }));
-    this.couplers = [
-      { at: [X(0), inY], out: false, guide: 'input' },
-      { at: [X(1), upY], out: true, guide: 'upC' },
-      { at: [X(1), Y(0.02)], out: true, guide: 'drop1' },
-      { at: [X(1), drop2Y], out: true, guide: 'drop2' },
-      { at: [X(1), lowY], out: true, guide: 'lowC' },
-      { at: [X(1), Y(0.99)], out: true, guide: 'crossOut' },
+    const centered = (gap: number): Layout => Array.from({ length: GUIDES }, (_, n) => (n - (GUIDES - 1) / 2) * gap);
+    const spread = centered(far);
+    const array = centered(TIGHT);
+    // Pairs (0,1) (2,3) (4,5), each pair tight, pairs far apart.
+    const pairs: Layout = [-1, -1, 0, 0, 1, 1].map((c, n) => c * far * 1.8 + (n % 2 === 0 ? -TIGHT / 2 : TIGHT / 2));
+    // Shifted pairs (1,2) (3,4), with guides 0 and 5 off on their own.
+    const shifted: Layout = [-2.6 * far, -far - TIGHT / 2, -far + TIGHT / 2, far - TIGHT / 2, far + TIGHT / 2, 2.6 * far];
+    const keys: [number, Layout][] = [
+      [0, spread],
+      [0.08, spread],
+      [0.18, array],
+      [0.4, array],
+      [0.48, pairs],
+      [0.66, pairs],
+      [0.74, shifted],
+      [0.9, shifted],
+      [1, spread],
     ];
-    // Start settled rather than fading in from dark.
-    this.solve();
-    for (const guide of Object.values(this.guides)) guide.shown = guide.target;
+    const layoutAt = (u: number): Layout => {
+      let k = 0;
+      while (k < keys.length - 2 && u > keys[k + 1][0]) k++;
+      const [u0, a] = keys[k];
+      const [u1, b] = keys[k + 1];
+      const t = clamp((u - u0) / (u1 - u0), 0, 1);
+      const e = (1 - Math.cos(Math.PI * t)) / 2;
+      return a.map((y, n) => mid + y + (b[n] - y) * e);
+    };
+
+    const count = Math.max(2, Math.ceil((R - L) / STEP));
+    this.xs = Array.from({ length: count + 1 }, (_, i) => L + ((R - L) * i) / count);
+    this.ys = this.xs.map((_, i) => layoutAt(i / count));
+    this.kap = this.ys.map((ys) =>
+      Array.from({ length: GUIDES - 1 }, (_, n) => {
+        const gap = ys[n + 1] - ys[n];
+        return gap > TIGHT + 30 ? 0 : KAPPA * Math.exp(-(gap - TIGHT) / KAPPA_FADE);
+      })
+    );
+    this.re = this.xs.map(() => new Array(GUIDES).fill(0));
+    this.im = this.xs.map(() => new Array(GUIDES).fill(0));
+    this.propagate();
   }
 
-  /** Steady-state power through the circuit for the rings' current detuning. */
-  private solve() {
-    const [r1, r2, r3] = this.rings;
-    for (const ring of this.rings) ring.take = 1 / (1 + ring.detune * ring.detune);
-    const set = (name: string, p: number) => {
-      this.guides[name].target = p;
+  /** Solve the coupled-mode equations along the chip (RK4, in a frame rotating with the common phase). */
+  private propagate() {
+    const { xs, kap, re, im, heater } = this;
+    const theta = Math.PI / 4 + (Math.PI / 4) * Math.sin((2 * Math.PI * this.t) / this.balancePeriod);
+    const phi = (2 * Math.PI * this.t) / this.phasePeriod;
+    let ar = new Array(GUIDES).fill(0);
+    let ai = new Array(GUIDES).fill(0);
+    ar[1] = Math.cos(theta);
+    ar[4] = Math.sin(theta) * Math.cos(phi);
+    ai[4] = Math.sin(theta) * Math.sin(phi);
+
+    const deriv = (k: number[], dbeta: number[], r: number[], m: number[]) => {
+      const dr = new Array(GUIDES);
+      const dm = new Array(GUIDES);
+      for (let n = 0; n < GUIDES; n++) {
+        // c = δβ·a_n + κ_{n-1}·a_{n-1} + κ_n·a_{n+1};  da/dz = i·c
+        let cr = dbeta[n] * r[n];
+        let ci = dbeta[n] * m[n];
+        if (n > 0) {
+          cr += k[n - 1] * r[n - 1];
+          ci += k[n - 1] * m[n - 1];
+        }
+        if (n < GUIDES - 1) {
+          cr += k[n] * r[n + 1];
+          ci += k[n] * m[n + 1];
+        }
+        dr[n] = -ci;
+        dm[n] = cr;
+      }
+      return [dr, dm];
     };
-    set('input', 1);
-    set('splitUp', 0.5);
-    set('splitDown', 0.5);
-    set('upA', 0.5);
-    set('drop1', 0.5 * r1.take);
-    const afterRing1 = 0.5 * (1 - r1.take);
-    set('upB', afterRing1);
-    set('drop2', afterRing1 * r2.take);
-    set('upC', afterRing1 * (1 - r2.take));
-    set('lowA', 0.5);
-    set('lowCoupler', 0.375);
-    set('crossIn', 0);
-    set('drop1Stub', 0);
-    set('drop2Stub', 0);
-    set('crossCoupler', 0.125);
-    set('crossOut', 0.25);
-    set('lowB', 0.25);
-    // The all-pass ring mostly absorbs what it takes.
-    set('lowC', 0.25 * (1 - 0.85 * r3.take));
+    const shiftAt = (x: number) => {
+      const out = new Array(GUIDES).fill(0);
+      if (heater.guide >= 0 && heater.amount > 0.001) {
+        out[heater.guide] = HEATER_SHIFT * heater.amount * Math.exp(-(((x - heater.x) / HEATER_WIDTH) ** 2));
+      }
+      return out;
+    };
+
+    for (let i = 0; i < xs.length; i++) {
+      re[i] = ar.slice();
+      im[i] = ai.slice();
+      if (i === xs.length - 1) break;
+      const h = xs[i + 1] - xs[i];
+      const k = kap[i];
+      const b0 = shiftAt(xs[i]);
+      const b1 = shiftAt(xs[i] + h / 2);
+      const b2 = shiftAt(xs[i + 1]);
+      const add = (r: number[], m: number[], dr: number[], dm: number[], f: number) => [
+        r.map((v, n) => v + dr[n] * f),
+        m.map((v, n) => v + dm[n] * f),
+      ];
+      const [k1r, k1i] = deriv(k, b0, ar, ai);
+      const [r2, m2] = add(ar, ai, k1r, k1i, h / 2);
+      const [k2r, k2i] = deriv(k, b1, r2, m2);
+      const [r3, m3] = add(ar, ai, k2r, k2i, h / 2);
+      const [k3r, k3i] = deriv(k, b1, r3, m3);
+      const [r4, m4] = add(ar, ai, k3r, k3i, h);
+      const [k4r, k4i] = deriv(k, b2, r4, m4);
+      ar = ar.map((v, n) => v + (h / 6) * (k1r[n] + 2 * k2r[n] + 2 * k3r[n] + k4r[n]));
+      ai = ai.map((v, n) => v + (h / 6) * (k1i[n] + 2 * k2i[n] + 2 * k3i[n] + k4i[n]));
+    }
   }
 
   step(dt: number, pointer: Pointer) {
     this.t += dt;
-    const ease = 1 - Math.exp(-dt * POWER_RATE);
-    for (const ring of this.rings) {
-      ring.hovered = pointer.active && Math.hypot(pointer.x - ring.x, pointer.y - ring.y) < this.hoverRadius;
-      // Hovering heats the ring onto resonance; otherwise it drifts.
-      const target = ring.hovered ? 0 : DRIFT_AMPLITUDE * Math.sin((2 * Math.PI * this.t) / ring.period + ring.phase);
-      ring.detune += (target - ring.detune) * (1 - Math.exp(-dt * 2.5));
+    // Find the guide under the pointer, if any, and ease the heater on or off.
+    let target = 0;
+    if (pointer.active && this.xs.length) {
+      const i = clamp(Math.round((pointer.x - this.xs[0]) / STEP), 0, this.xs.length - 1);
+      const inside = pointer.x >= this.xs[0] - 10 && pointer.x <= this.xs[this.xs.length - 1] + 10;
+      const ys = this.ys[i];
+      let best = -1;
+      let bestD = 9;
+      ys.forEach((y, n) => {
+        const d = Math.abs(y - pointer.y);
+        if (d < bestD) {
+          bestD = d;
+          best = n;
+        }
+      });
+      if (inside && best >= 0) {
+        if (this.heater.guide !== best && this.heater.amount > 0.05) {
+          target = 0; // fade out before moving to another guide
+        } else {
+          this.heater.guide = best;
+          this.heater.x = pointer.x;
+          target = 1;
+        }
+      }
     }
-    this.solve();
-    for (const guide of Object.values(this.guides)) guide.shown += (guide.target - guide.shown) * ease;
-    const [r1, r2, r3] = this.rings;
-    const feeds = [0.5 * r1.take, this.guides.upB.target * r2.take, 0.25 * r3.take];
-    this.rings.forEach((ring, i) => {
-      ring.glow += (Math.min(1, feeds[i] * 2.2) - ring.glow) * ease;
-    });
+    this.heater.amount += (target - this.heater.amount) * (1 - Math.exp(-dt * 4));
+    this.propagate();
   }
 
   draw(ctx: CanvasRenderingContext2D, color: Rgb) {
+    const { xs, ys, re, im } = this;
+    if (!xs.length) return;
     const c = rgb(color);
     ctx.strokeStyle = c;
     ctx.fillStyle = c;
     ctx.lineCap = 'round';
-    const level = (p: number) => Math.min(1, p * 1.8);
-
-    const stroke = (pts: Pt[]) => {
+    // The layout: each guide as a faint line.
+    ctx.globalAlpha = 0.2;
+    ctx.lineWidth = 1.2;
+    for (let n = 0; n < GUIDES; n++) {
       ctx.beginPath();
-      ctx.moveTo(pts[0][0], pts[0][1]);
-      for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
+      ctx.moveTo(xs[0], ys[0][n]);
+      for (let i = 1; i < xs.length; i++) ctx.lineTo(xs[i], ys[i][n]);
       ctx.stroke();
-    };
-
-    // The chip layout, then the light it carries.
-    for (const guide of Object.values(this.guides)) {
-      ctx.globalAlpha = 0.22;
-      ctx.lineWidth = 1.5;
-      stroke(guide.pts);
-      const p = level(guide.shown);
-      if (p > 0.01) {
-        ctx.globalAlpha = 0.12 + 0.5 * p;
-        ctx.lineWidth = 3;
-        stroke(guide.pts);
-      }
     }
-
-    // Flow dots, drifting left to right.
-    const offset = (this.t * FLOW_SPEED) % DOT_SPACING;
-    for (const guide of Object.values(this.guides)) {
-      const p = level(guide.shown);
-      if (p < 0.03) continue;
-      ctx.globalAlpha = 0.8 * p;
-      const total = guide.len[guide.len.length - 1];
-      let k = 0;
-      ctx.beginPath();
-      for (let d = offset; d < total; d += DOT_SPACING) {
-        while (k < guide.len.length - 2 && guide.len[k + 1] < d) k++;
-        const span = guide.len[k + 1] - guide.len[k] || 1;
-        const f = (d - guide.len[k]) / span;
-        const x = guide.pts[k][0] + (guide.pts[k + 1][0] - guide.pts[k][0]) * f;
-        const y = guide.pts[k][1] + (guide.pts[k + 1][1] - guide.pts[k][1]) * f;
-        ctx.moveTo(x + 2, y);
-        ctx.arc(x, y, 2, 0, Math.PI * 2);
-      }
-      ctx.fill();
-    }
-
-    // Rings: outline, circulating light, and a heater mark when hovered.
-    for (const ring of this.rings) {
-      ctx.globalAlpha = 0.22;
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.arc(ring.x, ring.y, ring.r, 0, Math.PI * 2);
-      ctx.stroke();
-      if (ring.glow > 0.01) {
-        ctx.globalAlpha = 0.12 + 0.55 * ring.glow;
-        ctx.lineWidth = 3;
+    // The light: brightness from intensity, with a slow ripple on the wave's phase.
+    ctx.lineWidth = 2.8;
+    const drift = 2 * Math.PI * RIPPLE_HZ * this.t;
+    for (let n = 0; n < GUIDES; n++) {
+      for (let i = 0; i < xs.length - 1; i++) {
+        const intensity = re[i][n] * re[i][n] + im[i][n] * im[i][n];
+        const level = Math.min(1, intensity * 1.6);
+        if (level < 0.015) continue;
+        const phase = Math.atan2(im[i][n], re[i][n]) + BETA * (xs[i] - xs[0]) - drift;
+        const ripple = 1 - RIPPLE_DEPTH / 2 + (RIPPLE_DEPTH / 2) * Math.cos(phase);
+        ctx.globalAlpha = (0.06 + 0.74 * level) * ripple;
         ctx.beginPath();
-        ctx.arc(ring.x, ring.y, ring.r, 0, Math.PI * 2);
+        ctx.moveTo(xs[i], ys[i][n]);
+        ctx.lineTo(xs[i + 1], ys[i + 1][n]);
         ctx.stroke();
-        ctx.globalAlpha = 0.85 * ring.glow;
-        ctx.beginPath();
-        const count = Math.max(4, Math.round((2 * Math.PI * ring.r) / DOT_SPACING));
-        const spin = (this.t * FLOW_SPEED) / ring.r;
-        for (let i = 0; i < count; i++) {
-          const a = spin + (i / count) * Math.PI * 2;
-          const x = ring.x + Math.cos(a) * ring.r;
-          const y = ring.y + Math.sin(a) * ring.r;
-          ctx.moveTo(x + 2, y);
-          ctx.arc(x, y, 2, 0, Math.PI * 2);
-        }
-        ctx.fill();
-      }
-      if (ring.hovered) {
-        ctx.globalAlpha = 0.5;
-        ctx.lineWidth = 1;
-        ctx.setLineDash([2, 4]);
-        ctx.beginPath();
-        ctx.arc(ring.x, ring.y, ring.r + 8, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.setLineDash([]);
       }
     }
-
-    // Grating couplers: small fans where light enters and leaves the chip.
-    for (const { at, out, guide } of this.couplers) {
-      const p = level(this.guides[guide].shown);
-      ctx.lineWidth = 1.2;
-      for (let i = 1; i <= 3; i++) {
-        ctx.globalAlpha = 0.18 + 0.5 * p * (1 - i * 0.2);
+    // Heater pad on the guide under the pointer.
+    const { heater } = this;
+    if (heater.guide >= 0 && heater.amount > 0.02) {
+      const i = clamp(Math.round((heater.x - xs[0]) / STEP), 0, xs.length - 1);
+      const y = ys[i][heater.guide];
+      ctx.globalAlpha = 0.55 * heater.amount;
+      ctx.lineWidth = 1;
+      ctx.setLineDash([3, 3]);
+      ctx.strokeRect(heater.x - HEATER_WIDTH, y - 7, HEATER_WIDTH * 2, 14);
+      ctx.setLineDash([]);
+    }
+    // Grating couplers: fans where light enters (guides 1 and 4) and leaves.
+    const fan = (x: number, y: number, out: boolean, level: number) => {
+      ctx.lineWidth = 1.1;
+      for (let k = 1; k <= 3; k++) {
+        ctx.globalAlpha = 0.16 + 0.5 * level * (1 - k * 0.2);
         ctx.beginPath();
         const dir = out ? 0 : Math.PI;
-        ctx.arc(at[0] - (out ? 6 : -6), at[1], 4 + i * 3.5, dir - 0.55, dir + 0.55);
+        ctx.arc(x - (out ? 5 : -5), y, 3 + k * 3, dir - 0.55, dir + 0.55);
         ctx.stroke();
       }
+    };
+    const last = xs.length - 1;
+    for (let n = 0; n < GUIDES; n++) {
+      const inLevel = Math.min(1, (re[0][n] ** 2 + im[0][n] ** 2) * 1.6);
+      if (n === 1 || n === 4) fan(xs[0], ys[0][n], false, inLevel);
+      fan(xs[last], ys[last][n], true, Math.min(1, (re[last][n] ** 2 + im[last][n] ** 2) * 1.6));
     }
     ctx.globalAlpha = 1;
     ctx.lineCap = 'butt';
@@ -569,8 +522,9 @@ export class PhotonicCircuit implements Sim {
 }
 
 // ---------------------------------------------------------------------------
-// Boltzmann machine: units scattered across the space, each wired to a few
-// nearby units with random positive (solid) or negative (dashed) weights.
+// Boltzmann machine: units scattered across the space, wired by a random
+// graph (any pair may connect) with positive (solid) or negative (dashed)
+// weights. Every new instance draws a fresh graph.
 // Units update one at a time by Gibbs sampling and fade on and off. Clicking
 // a unit clamps it on (click again to release), and its influence spreads.
 
@@ -619,23 +573,26 @@ export class Boltzmann implements Sim {
       if (pos.every(([x, y]) => Math.hypot(x - p[0], y - p[1]) > minGap)) pos.push(p);
     }
     this.pos = pos;
-    // Wire each unit to its three nearest neighbors (no duplicates).
-    const seen = new Set<string>();
+    // A random graph: each pair connects with a probability that gives about
+    // three edges per unit, and no unit is left on its own.
+    const p = 3 / (pos.length - 1);
+    const weight = () => (Math.random() < 0.7 ? 1.4 + Math.random() * 1.8 : -(1.2 + Math.random() * 1.6));
     this.edges = [];
-    pos.forEach((p, a) => {
-      const nearest = pos
-        .map((q, b) => ({ b, d: Math.hypot(q[0] - p[0], q[1] - p[1]) }))
-        .filter(({ b }) => b !== a)
-        .sort((m, n) => m.d - n.d)
-        .slice(0, 3);
-      for (const { b } of nearest) {
-        const key = a < b ? `${a}-${b}` : `${b}-${a}`;
-        if (seen.has(key)) continue;
-        seen.add(key);
-        // Mostly excitatory, some inhibitory, so on-clusters form and compete.
-        const w = Math.random() < 0.7 ? 1.4 + Math.random() * 1.8 : -(1.2 + Math.random() * 1.6);
-        this.edges.push({ a, b, w });
+    const degree = pos.map(() => 0);
+    for (let a = 0; a < pos.length; a++) {
+      for (let b = a + 1; b < pos.length; b++) {
+        if (Math.random() < p) {
+          this.edges.push({ a, b, w: weight() });
+          degree[a]++;
+          degree[b]++;
+        }
       }
+    }
+    degree.forEach((d, a) => {
+      if (d > 0) return;
+      let b = (Math.random() * (pos.length - 1)) | 0;
+      if (b >= a) b++;
+      this.edges.push({ a, b, w: weight() });
     });
     this.neighbors = pos.map(() => []);
     for (const { a, b, w } of this.edges) {
@@ -725,15 +682,15 @@ export class Boltzmann implements Sim {
 export const SIMS: Record<SimKey, { create: () => Sim; caption: string }> = {
   spins: {
     create: () => new SpinLattice(),
-    caption: 'Ising spins near the critical temperature. Your cursor is a magnetic field: spins under it align.',
+    caption: 'Ising spins near the critical temperature. Your cursor heats them, so they flip at random.',
   },
   swarm: {
     create: () => new Swarm(),
     caption: 'A Vicsek swarm: each agent follows its neighbors. Your cursor scatters them.',
   },
   photonics: {
-    create: () => new PhotonicCircuit(),
-    caption: 'A photonic circuit: on resonance, a ring pulls light into its own waveguide. Hover a ring to tune it.',
+    create: () => new CoupledWaveguides(),
+    caption: 'Coupled waveguides: light tunnels between neighbors and interferes. Your cursor heats a guide, shifting its phase.',
   },
   boltzmann: {
     create: () => new Boltzmann(),

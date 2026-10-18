@@ -4,8 +4,8 @@ import { type Pointer, type Rgb, SIMS, type Sim, type SimKey } from './sims';
 
 interface InterestFieldProps {
   sim: SimKey;
-  /** Freeze the simulation where it is. */
-  paused?: boolean;
+  /** Changing this starts a fresh instance of the same sim (e.g. a new random graph). */
+  variant?: number;
   className?: string;
   /** Content shown over the simulation. */
   children?: ReactNode;
@@ -20,24 +20,18 @@ function accentColor(): Rgb {
 }
 
 // A full-bleed canvas running one simulation at a time behind its children.
-// Switching `sim` fades the old one out and the new one in.
-export default function InterestField({ sim, paused = false, className, children }: InterestFieldProps) {
+// Switching `sim` (or `variant`) fades the old one out and the new one in.
+export default function InterestField({ sim, variant = 0, className, children }: InterestFieldProps) {
   const rootRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const simRef = useRef<Sim | null>(null);
-  const wantedRef = useRef<SimKey>(sim);
-  const pausedRef = useRef(paused);
+  const wantedRef = useRef(`${sim}:${variant}`);
   const kickRef = useRef<() => void>(() => {});
 
   useEffect(() => {
-    pausedRef.current = paused;
+    wantedRef.current = `${sim}:${variant}`;
     kickRef.current();
-  }, [paused]);
-
-  useEffect(() => {
-    wantedRef.current = sim;
-    kickRef.current();
-  }, [sim]);
+  }, [sim, variant]);
 
   useEffect(() => {
     const root = rootRef.current;
@@ -50,7 +44,7 @@ export default function InterestField({ sim, paused = false, className, children
     let color = accentColor();
     let width = 0;
     let height = 0;
-    let shownKey: SimKey | null = null;
+    let shownKey: string | null = null;
     let fadingOut = false;
     let raf = 0;
     let last = 0;
@@ -65,9 +59,9 @@ export default function InterestField({ sim, paused = false, className, children
       simRef.current?.draw(ctx, color);
     };
 
-    const mount = (key: SimKey) => {
-      shownKey = key;
-      const next = SIMS[key].create();
+    const mount = (id: string) => {
+      shownKey = id;
+      const next = SIMS[id.split(':')[0] as SimKey].create();
       next.resize(width, height);
       simRef.current = next;
       paint();
@@ -90,7 +84,7 @@ export default function InterestField({ sim, paused = false, className, children
       }, FADE_MS);
     };
 
-    const running = () => visible && !pausedRef.current && !reduceMotion;
+    const running = () => visible && !reduceMotion;
 
     const loop = (now: number) => {
       raf = 0;

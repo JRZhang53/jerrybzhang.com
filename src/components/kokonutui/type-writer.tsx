@@ -57,6 +57,8 @@ interface TypewriterTitleProps {
   textClassName?: string;
   /** Called with a phrase's index as it starts being typed (or shown, with reduced motion). */
   onPhraseStart?: (index: number) => void;
+  /** Phrase to start from (read once, on mount). */
+  startAt?: number;
 }
 
 const DEFAULT_SEQUENCES: TypewriterSequence[] = [
@@ -163,6 +165,7 @@ export default function TypewriterTitle({
   className,
   textClassName,
   onPhraseStart,
+  startAt = 0,
 }: TypewriterTitleProps) {
   const [screen, setScreen] = useState<Screen>({ text: "", selected: 0 });
   const ref = useRef<HTMLSpanElement>(null);
@@ -170,7 +173,7 @@ export default function TypewriterTitle({
   const isInView = useInView(ref);
   const isRunning = !paused && isInView;
   const shouldReduceMotion = useReducedMotion();
-  const position = useRef<Position>({ sequence: 0, char: 0, deleting: false });
+  const position = useRef<Position>({ sequence: startAt, char: 0, deleting: false });
   const random = useRef<() => number>(createRandom(seed));
 
   const onPhraseStartRef = useRef(onPhraseStart);
