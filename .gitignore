@@ -3,3 +3,6 @@ dist/
 .astro/
 .env
 .DS_Store
+
+# Private list of side-project ideas (kept local, never published)
+fun-ideas/
