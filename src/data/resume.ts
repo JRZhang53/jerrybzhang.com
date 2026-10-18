@@ -12,7 +12,7 @@ export const EDUCATION: { school: string; details: string[]; years: string }[] =
     ],
     years: '2023 – 2027',
   },
-  { school: 'University of Minnesota', details: ['Post-Secondary Enrollment Options (PSEO), taking college courses during high school'], years: '2021 – 2023' },
+  { school: 'University of Minnesota', details: ['Post-Secondary Enrollment Options (PSEO) dual enrollment'], years: '2021 – 2023' },
   { school: 'Minnetonka Senior High School', details: ['High school diploma'], years: '2019 – 2023' },
 ];
 
@@ -46,48 +46,24 @@ export const EXPERIENCE: Position[] = [
   },
 ];
 
-export const RESEARCH: Position[] = [
+// Each links to the named project's write-up on /projects.
+export const RESEARCH: { org: string; title: string; years: string; project: string }[] = [
   {
     org: 'NASA Langley Research Center',
-    place: 'Hampton, VA',
-    roles: [
-      {
-        title: 'Research Intern',
-        years: 'Summer 2025',
-        points: [
-          'Studied ion transport in polymer electrolytes for solid-state batteries, as part of the SABERS project.',
-          'Ran high-performance computing simulations and developed a theoretical framework for the polymer models.',
-        ],
-      },
-    ],
+    title: 'Research Intern',
+    years: 'Summer 2025',
+    project: 'Ion transport in polymer electrolytes',
   },
   {
     org: 'Kaxiras Group, Harvard',
-    place: 'Cambridge, MA',
-    roles: [
-      {
-        title: 'Undergraduate Researcher',
-        years: '2023 – 2024',
-        points: [
-          'Built a framework for solving quantum many-body systems with machine learning.',
-          'Used physics-informed neural networks and group-equivariant CNNs in PyTorch to study criticality and phase transitions in magnetic systems.',
-          'Applied representation theory to speed up exact diagonalization of the quantum Heisenberg model.',
-        ],
-      },
-    ],
+    title: 'Undergraduate Researcher',
+    years: '2023 – 2024',
+    project: 'Computational methods for quantum many-body problems',
   },
   {
     org: 'Stony Brook University',
-    roles: [
-      {
-        title: 'Research Intern, Garcia Summer Research Program',
-        years: '2022',
-        points: [
-          'Computational materials science research with Dr. Dilip Gersappe.',
-          'Gave an oral presentation at the Fall 2022 Materials Research Society meeting.',
-          'Published a paper on sustainability and development ethics in the JESTI journal.',
-        ],
-      },
-    ],
+    title: 'Research Intern, Garcia Summer Research Program',
+    years: '2022',
+    project: 'Molecular dynamics of soil-strengthening hydrogels',
   },
 ];

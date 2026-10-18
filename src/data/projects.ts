@@ -14,6 +14,14 @@ export type Project = {
   year?: string;
 };
 
+/** Anchor for a project on /projects, e.g. /projects/#optimization-and-sampling-in-spin-glasses. */
+export const projectId = (p: Pick<Project, 'name'>) =>
+  p.name
+    .normalize('NFKD')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
+
 export const PROJECTS: Project[] = [
   {
     name: 'Latent structure in protein sequences via HMMs',
@@ -56,12 +64,20 @@ export const PROJECTS: Project[] = [
     year: '2024',
   },
   {
+    name: 'Ion transport in polymer electrolytes',
+    kind: 'research',
+    description:
+      'Research internship at NASA Langley on the SABERS solid-state battery project: high-performance computing simulations of how ions move through polymer electrolytes, plus a theoretical framework for the polymer models.',
+    tags: ['Batteries', 'HPC simulation'],
+    year: '2025',
+  },
+  {
     name: 'Computational methods for quantum many-body problems',
     kind: 'research',
     description:
       'Methods for spin-lattice systems such as the quantum Heisenberg model: symmetry reduction to speed up exact diagonalization, and a new variational Monte Carlo approach built on group-equivariant convolutional neural networks.',
     tags: ['Quantum physics', 'Machine learning'],
-    year: '2023',
+    year: '2024',
   },
   {
     name: 'Molecular dynamics of soil-strengthening hydrogels',

@@ -2,15 +2,17 @@
 import Base from '../layouts/Base.astro';
 import fs from 'node:fs';
 import { EDUCATION, EXPERIENCE, RESEARCH } from '../data/resume';
-import { PROJECTS } from '../data/projects';
+import { PROJECTS, projectId } from '../data/projects';
 
 // Drop your resume at public/resume.pdf and it replaces the summary below.
 const hasPdf = fs.existsSync(new URL('../../public/resume.pdf', import.meta.url));
-const positions = [
-  { heading: 'Experience', items: EXPERIENCE },
-  { heading: 'Research', items: RESEARCH },
+const link = (name: string) => `/projects/#${projectId({ name })}`;
+const research = RESEARCH.map((r) => ({ title: r.org, detail: r.title, years: r.years, href: link(r.project) }));
+const courses = PROJECTS.filter((p) => p.kind === 'course').map((p) => ({ title: p.name, detail: '', years: p.year ?? '', href: link(p.name) }));
+const linkedLists = [
+  { heading: 'Research', items: research },
+  { heading: 'Course projects', items: courses },
 ];
-const projects = PROJECTS.filter((p) => p.kind === 'course');
 ---
 
 <Base title="Resume" description="Education, experience, research, and projects of Jerry Zhang.">
@@ -39,7 +41,7 @@ const projects = PROJECTS.filter((p) => p.kind === 'course');
         </ul>
       </section>
 
-      {positions.map(({ heading, items }) => (
+      {[{ heading: 'Experience', items: EXPERIENCE }].map(({ heading, items }) => (
         <section class="grid gap-x-12 gap-y-4 md:grid-cols-[11rem_1fr]">
           <h2 class="text-2xl md:pt-1">{heading}</h2>
           <ul class="max-w-[38rem] space-y-9">
@@ -70,20 +72,22 @@ const projects = PROJECTS.filter((p) => p.kind === 'course');
         </section>
       ))}
 
-      <section class="grid gap-x-12 gap-y-4 md:grid-cols-[11rem_1fr]">
-        <h2 class="text-2xl md:pt-1">Course projects</h2>
-        <div class="max-w-[38rem]">
-          <ul class="space-y-2">
-            {projects.map((p) => (
-              <li class="flex items-baseline justify-between gap-6">
-                <span>{p.name}</span>
-                <span class="shrink-0 font-display text-sm text-muted tabular-nums">{p.year}</span>
+      {linkedLists.map(({ heading, items }) => (
+        <section class="grid gap-x-12 gap-y-4 md:grid-cols-[11rem_1fr]">
+          <h2 class="text-2xl md:pt-1">{heading}</h2>
+          <ul class="max-w-[38rem] space-y-3">
+            {items.map((i) => (
+              <li>
+                <div class="flex items-baseline justify-between gap-6">
+                  <a href={i.href} class="text-ink decoration-line hover:text-accent hover:decoration-accent">{i.title}</a>
+                  <span class="shrink-0 font-display text-sm text-muted tabular-nums">{i.years}</span>
+                </div>
+                {i.detail && <p class="text-base text-muted">{i.detail}</p>}
               </li>
             ))}
           </ul>
-          <p class="mt-4 font-display text-base"><a href="/projects/">Read the project summaries</a></p>
-        </div>
-      </section>
+        </section>
+      ))}
     </div>
   )}
 </Base>
