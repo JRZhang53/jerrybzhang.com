@@ -10,9 +10,10 @@
  * @github: https://github.com/kokonut-labs/kokonutui
  */
 
-import { motion, useInView, useReducedMotion } from "motion/react";
+import { motion, useInView } from "motion/react";
 import { type Ref, useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
+import { useReducedMotion } from '@/lib/use-reduced-motion';
 
 interface TypewriterSequence {
   text: string;
@@ -59,6 +60,8 @@ interface TypewriterTitleProps {
   onPhraseStart?: (index: number) => void;
   /** Phrase to start from (read once, on mount). */
   startAt?: number;
+  /** Render a complete first phrase before JavaScript; begin by holding, then erasing it. */
+  initialText?: boolean;
 }
 
 const DEFAULT_SEQUENCES: TypewriterSequence[] = [
@@ -166,14 +169,15 @@ export default function TypewriterTitle({
   textClassName,
   onPhraseStart,
   startAt = 0,
+  initialText = false,
 }: TypewriterTitleProps) {
-  const [screen, setScreen] = useState<Screen>({ text: "", selected: 0 });
+  const [screen, setScreen] = useState<Screen>({ text: initialText ? sequences[startAt]?.text ?? '' : '', selected: 0 });
   const ref = useRef<HTMLSpanElement>(null);
   const caretRef = useRef<HTMLSpanElement>(null);
   const isInView = useInView(ref);
   const isRunning = !paused && isInView;
   const shouldReduceMotion = useReducedMotion();
-  const position = useRef<Position>({ sequence: startAt, char: 0, deleting: false });
+  const position = useRef<Position>({ sequence: startAt, char: initialText ? sequences[startAt]?.text.length ?? 0 : 0, deleting: false });
   const random = useRef<() => number>(createRandom(seed));
 
   const onPhraseStartRef = useRef(onPhraseStart);
@@ -190,15 +194,13 @@ export default function TypewriterTitle({
     random.current = createRandom(seed);
   }, [seed]);
 
-  // Reduced motion: show the final phrase, no typing loop. Keyed on the
-  // phrase itself so new `sequences` still update the text.
-  const finalText = sequences.at(-1)?.text ?? "";
   useEffect(() => {
     if (shouldReduceMotion) {
-      setScreen({ text: finalText, selected: 0 });
-      onPhraseStartRef.current?.(sequencesRef.current.length - 1);
+      const current = sequencesRef.current[position.current.sequence];
+      setScreen({ text: current?.text ?? '', selected: 0 });
+      onPhraseStartRef.current?.(position.current.sequence);
     }
-  }, [shouldReduceMotion, finalText]);
+  }, [shouldReduceMotion]);
 
   useEffect(() => {
     if (shouldReduceMotion) {
@@ -217,7 +219,7 @@ export default function TypewriterTitle({
       typoRate = DEFAULT_TYPO_RATE;
     }
     const pos = position.current;
-    const timers = new Set<ReturnType<typeof setTimeout>>();
+    const timers = new Map<ReturnType<typeof setTimeout>, () => void>();
     let idleTimer: ReturnType<typeof setTimeout> | undefined;
     let stopped = false;
 
@@ -235,7 +237,7 @@ export default function TypewriterTitle({
             resolve();
           }
         }, ms);
-        timers.add(timer);
+        timers.set(timer, () => reject(new Stopped()));
       });
 
     // Every keystroke holds the caret solid; it blinks again once idle.
@@ -364,9 +366,11 @@ export default function TypewriterTitle({
     const caret = caretRef.current;
     return () => {
       stopped = true;
-      for (const timer of timers) {
+      for (const [timer, cancel] of timers) {
         clearTimeout(timer);
+        cancel();
       }
+      timers.clear();
       clearTimeout(idleTimer);
       if (caret) {
         caret.dataset.idle = "true";
@@ -413,10 +417,10 @@ export default function TypewriterTitle({
           // Every phrase sits invisibly in the same grid cell, so the box is
           // as wide as the widest one as rendered (proportional fonts, CJK)
           // and the text grows from a fixed left edge.
-          "inline-grid justify-items-start whitespace-pre pr-[0.25em] @2xl:text-6xl @lg:text-5xl text-4xl leading-[1.2]",
+          "inline-grid min-w-0 max-w-full justify-items-start whitespace-pre-wrap pr-[0.25em] @2xl:text-6xl @lg:text-5xl text-4xl leading-[1.2]",
           textClassName
         )}
-        initial={{ opacity: 0 }}
+        initial={false}
         ref={ref}
         transition={{ duration: 0.5 }}
       >
@@ -431,9 +435,9 @@ export default function TypewriterTitle({
         ))}
         <span className="col-start-1 row-start-1 min-h-[1.2em]">
           {kept}
-          <Caret caretRef={caretRef} />
+          {!shouldReduceMotion && !paused && <Caret caretRef={caretRef} />}
           {selected && (
-            <span className="rounded-[0.08em] bg-sky-500/25 dark:bg-sky-400/30">
+            <span className="rounded-[0.08em] bg-accent/25">
               {selected}
             </span>
           )}

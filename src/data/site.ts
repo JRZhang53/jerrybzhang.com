@@ -1,4 +1,9 @@
-import type { Interest } from '@/components/Hero';
+import type { SimKey } from '@/components/interest-field/types';
+
+export interface Interest {
+  text: string;
+  sim: SimKey;
+}
 
 // Edit this file to update your name, interests, and links across the whole site.
 export const SITE = {

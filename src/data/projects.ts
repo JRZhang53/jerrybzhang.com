@@ -5,6 +5,8 @@
 //                plus any scripts or assets) and set href to '/fun/<name>/'. This section only
 //                appears once there's at least one side project.
 export type Project = {
+  /** Stable public anchor: do not change when editing the title. */
+  id: string;
   name: string;
   kind: 'research' | 'course' | 'side';
   description: string;
@@ -12,19 +14,20 @@ export type Project = {
   href?: string; // live site, paper, or demo
   repo?: string; // source code
   year?: string;
+  figure?: { src: string; alt: string; caption: string; width: number; height: number; source: string; wide?: boolean };
 };
 
-/** Anchor for a project on /projects, e.g. /projects/#optimization-and-sampling-in-spin-glasses. */
-export const projectId = (p: Pick<Project, 'name'>) =>
-  p.name
-    .normalize('NFKD')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '');
-
-export const PROJECTS: Project[] = [
+export const PROJECTS = [
   {
+    id: 'latent-structure-in-protein-sequences-via-hmms',
     name: 'Latent structure in protein sequences via HMMs',
+    repo: 'https://github.com/JRZhang53/protein-hmm',
+    figure: {
+      src: '/projects/protein-states.png', width: 3310, height: 2147,
+      alt: 'RRM protein structure with residues colored by latent HMM state: buried hydrophobic residues in red and acidic surface residues in green.',
+      caption: 'A four-state HMM mapped onto an RRM protein structure.',
+      source: 'https://github.com/JRZhang53/protein-hmm/blob/b18836da07d9c5300b1f893820a2e641591479d9/reports/figures/by_K/K4/structure_colored_PF00076_Q8IUH3_23-202.png',
+    },
     kind: 'course',
     description:
       'How much of a protein’s 3D organization can a simple, interpretable model recover? Unsupervised hidden Markov models find recurring biochemical patterns in amino-acid sequences, and I compare their latent states against hydrophobicity, secondary structure, and solvent accessibility, alongside composition-based and supervised baselines.',
@@ -32,6 +35,7 @@ export const PROJECTS: Project[] = [
     year: '2026',
   },
   {
+    id: 'optimization-and-sampling-in-spin-glasses',
     name: 'Optimization and sampling in spin glasses',
     kind: 'course',
     description:
@@ -40,6 +44,7 @@ export const PROJECTS: Project[] = [
     year: '2026',
   },
   {
+    id: 'multiple-descent-for-minimum-l1-norm-interpolators',
     name: 'Multiple descent for minimum ℓ₁-norm interpolators',
     kind: 'course',
     description:
@@ -48,6 +53,7 @@ export const PROJECTS: Project[] = [
     year: '2025',
   },
   {
+    id: 'feedback-and-torsional-growth-of-a-1d-filament',
     name: 'Feedback and torsional growth of a 1D filament',
     kind: 'course',
     description:
@@ -56,6 +62,7 @@ export const PROJECTS: Project[] = [
     year: '2025',
   },
   {
+    id: 'pattern-formation-in-nonlinear-reaction-diffusion-systems',
     name: 'Pattern formation in nonlinear reaction-diffusion systems',
     kind: 'course',
     description:
@@ -64,6 +71,7 @@ export const PROJECTS: Project[] = [
     year: '2024',
   },
   {
+    id: 'ion-transport-in-polymer-electrolytes',
     name: 'Ion transport in polymer electrolytes',
     kind: 'research',
     description:
@@ -72,7 +80,15 @@ export const PROJECTS: Project[] = [
     year: '2025',
   },
   {
+    id: 'computational-methods-for-quantum-many-body-problems',
     name: 'Computational methods for quantum many-body problems',
+    repo: 'https://github.com/JRZhang53/ML-for-Quantum-Heisenberg-Model',
+    figure: {
+      src: '/projects/quantum-energy.png', width: 2000, height: 490, wide: true,
+      alt: 'Four density plots of energy estimates for batch sizes 5, 10, 20, and 100, with increasingly concentrated distributions.',
+      caption: 'Energy-estimate distributions at four sampling batch sizes.',
+      source: 'https://github.com/JRZhang53/ML-for-Quantum-Heisenberg-Model/blob/0bfc7e2de90671df32fb3959ad1a40062d7b3e9d/G-CNN/energy-sampling-accuracy.png',
+    },
     kind: 'research',
     description:
       'Methods for spin-lattice systems such as the quantum Heisenberg model: symmetry reduction to speed up exact diagonalization, and a new variational Monte Carlo approach built on group-equivariant convolutional neural networks.',
@@ -80,6 +96,7 @@ export const PROJECTS: Project[] = [
     year: '2024',
   },
   {
+    id: 'molecular-dynamics-of-soil-strengthening-hydrogels',
     name: 'Molecular dynamics of soil-strengthening hydrogels',
     kind: 'research',
     description:
@@ -87,4 +104,7 @@ export const PROJECTS: Project[] = [
     tags: ['Molecular dynamics', 'Materials'],
     year: '2023',
   },
-];
+] as const satisfies readonly Project[];
+
+export type ProjectId = (typeof PROJECTS)[number]['id'];
+export const projectHref = (id: ProjectId) => `/projects/#${id}`;

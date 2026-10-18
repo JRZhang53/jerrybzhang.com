@@ -28,7 +28,7 @@ export default function SiteNav({ items, pathname }: SiteNavProps) {
               <a
                 aria-current={path === active ? 'page' : undefined}
                 className={cn(
-                  'relative block px-2.5 py-2 font-display text-[15px] font-medium tracking-tight transition-colors duration-200 sm:px-3',
+                  'relative flex min-h-11 items-center px-2.5 py-2 font-display text-[15px] font-medium tracking-tight transition-colors duration-200 sm:px-3',
                   path === active || path === hovered ? 'text-ink' : 'text-muted'
                 )}
                 href={path}

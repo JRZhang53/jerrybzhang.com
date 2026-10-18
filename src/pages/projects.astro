@@ -1,38 +1,65 @@
 ---
 import Base from '../layouts/Base.astro';
-import { PROJECTS, projectId } from '../data/projects';
+import { PROJECTS, type Project } from '../data/projects';
 
+const projects: readonly Project[] = PROJECTS;
 const groups = [
-  { heading: 'Research', note: '', items: PROJECTS.filter((p) => p.kind === 'research') },
-  { heading: 'Course projects', note: 'Final projects for Harvard classes.', items: PROJECTS.filter((p) => p.kind === 'course') },
-  { heading: 'Side projects', note: 'Small things I made for fun. Each one runs right here on the site.', items: PROJECTS.filter((p) => p.kind === 'side') },
+  { id: 'research', heading: 'Research', note: '', items: projects.filter((p) => p.kind === 'research') },
+  { id: 'course-projects', heading: 'Course projects', note: 'Final projects for Harvard classes.', items: projects.filter((p) => p.kind === 'course') },
+  { id: 'side-projects', heading: 'Side projects', note: 'Interactive projects to explore.', items: projects.filter((p) => p.kind === 'side') },
 ].filter((g) => g.items.length > 0);
+function splitDescription(description: string) {
+  const end = description.search(/[.?]\s/);
+  return end < 0 ? { lead: description, rest: '' }
+    : { lead: description.slice(0, end + 1), rest: description.slice(end + 2) };
+}
 ---
 
 <Base title="Projects" description="Research, course projects, and side projects by Jerry Zhang.">
   <h1 class="font-display text-[clamp(2.75rem,7vw,4.5rem)] font-bold tracking-[-0.04em]">Projects</h1>
-
-  {groups.map(({ heading, note, items }) => (
-    <section class="mt-16">
-      <h2 class="text-2xl">{heading}</h2>
-      {note && <p class="mt-2 text-base text-muted">{note}</p>}
-      <ol class="mt-6 border-t border-line">
-        {items.map((p) => (
-          <li id={projectId(p)} class="grid scroll-mt-6 gap-x-12 gap-y-2 border-b border-line py-8 transition-colors duration-700 target:-mx-4 target:rounded-lg target:bg-accent/[0.07] target:px-4 md:grid-cols-[11rem_1fr]">
-            <span class="font-display text-sm text-muted tabular-nums md:pt-2">{p.year}</span>
-            <div class="max-w-[38rem]">
-              <h3 class="text-2xl">
+  <nav aria-label="Project sections" class="mt-6 flex flex-wrap gap-x-7 gap-y-2 border-b border-line pb-5 font-display text-sm">
+    {groups.map((group) => <a href={`#${group.id}`} class="inline-flex min-h-11 items-center gap-2 text-muted hover:text-accent">
+      {group.heading}<span class="text-xs tabular-nums">({group.items.length})</span>
+    </a>)}
+  </nav>
+  {groups.map(({ id, heading, note, items }) => (
+    <section id={id} class="mt-12 scroll-mt-8">
+      <div class="mb-4 flex flex-wrap items-baseline justify-between gap-2">
+        <h2 class="text-2xl">{heading}</h2>
+        {note && <p class="text-sm text-muted">{note}</p>}
+      </div>
+      <ol class="border-t border-line">
+        {items.map((p) => {
+          const { lead, rest } = splitDescription(p.description);
+          return <li id={p.id} class="project-entry scroll-mt-8 border-b border-line py-8 target:-mx-4 target:rounded-lg target:bg-accent/[0.06] target:px-4 sm:py-10">
+            <div class="flex items-start justify-between gap-6">
+              <h3 class="max-w-[43rem] text-[clamp(1.35rem,3vw,1.75rem)] leading-tight">
                 {p.href ? <a href={p.href} class="text-ink no-underline hover:text-accent">{p.name}</a> : p.name}
               </h3>
-              <p class="mt-2">{p.description}</p>
-              <div class="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 font-display text-sm">
-                {p.tags?.map((t) => <span class="text-muted">{t}</span>)}
-                {p.href && <a href={p.href}>{p.kind === 'side' ? 'Try it' : 'Visit'}</a>}
-                {p.repo && <a href={p.repo}>View source</a>}
-              </div>
+              <span class="shrink-0 pt-1 font-display text-sm text-muted tabular-nums">{p.year}</span>
             </div>
-          </li>
-        ))}
+            <div class:list={['mt-5 grid gap-6', p.figure && !p.figure.wide && 'md:grid-cols-[1.15fr_1fr] md:gap-10']}>
+              <div class="max-w-[43rem]">
+                <p class="text-base leading-relaxed text-pretty sm:text-lg">{lead}</p>
+                {rest && <p class="mt-3 text-base leading-relaxed text-pretty text-muted">{rest}</p>}
+                {p.tags && <ul aria-label="Topics" class="mt-4 flex flex-wrap gap-x-5 gap-y-1 font-display text-xs text-muted">
+                  {p.tags.map((tag) => <li>{tag}</li>)}
+                </ul>}
+                {(p.href || p.repo) && <div class="mt-4 flex flex-wrap gap-x-6 font-display text-sm">
+                  {p.href && <a class="inline-flex min-h-11 items-center" href={p.href}>{p.kind === 'side' ? 'Try it' : 'View project'}</a>}
+                  {p.repo && <a class="inline-flex min-h-11 items-center" href={p.repo}>View source</a>}
+                </div>}
+              </div>
+              {p.figure && <figure class:list={['min-w-0', p.figure.wide && 'mt-1']}>
+                <a href={p.figure.src} aria-label={`Open full-size figure: ${p.figure.caption}`} class="block rounded-lg">
+                  <img src={p.figure.src} alt={p.figure.alt} width={p.figure.width} height={p.figure.height} loading="lazy" decoding="async"
+                    class="h-auto w-full rounded-lg bg-white outline outline-black/10 dark:outline-white/10" />
+                </a>
+                <figcaption class="mt-3 text-sm leading-relaxed text-muted">{p.figure.caption} <a href={p.figure.source} class="text-muted">Original figure</a></figcaption>
+              </figure>}
+            </div>
+          </li>;
+        })}
       </ol>
     </section>
   ))}

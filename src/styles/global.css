@@ -31,6 +31,7 @@
 @layer base {
   html {
     -webkit-text-size-adjust: 100%;
+    scrollbar-gutter: stable;
   }
   body {
     background: var(--color-paper);
@@ -70,6 +71,28 @@
     background: var(--color-accent);
     color: var(--color-paper);
   }
+}
+
+.skip-link {
+  position: fixed;
+  z-index: 100;
+  top: 0.5rem;
+  left: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-display);
+  transform: translateY(-200%);
+}
+.skip-link:focus { transform: none; }
+
+/* Essential text is visible even if hydration fails. Only its position animates. */
+@media (prefers-reduced-motion: no-preference) {
+  .hero-name { animation: hero-rise 900ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+}
+@keyframes hero-rise {
+  from { transform: translateY(12px); }
+  to { transform: translateY(0); }
 }
 
 /* Long-form text in pickleball posts. */

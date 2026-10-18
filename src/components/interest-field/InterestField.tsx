@@ -1,11 +1,13 @@
 import { type ReactNode, useEffect, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import { type Pointer, type Rgb, SIMS, type Sim, type SimKey } from './sims';
+import { createFrameLoop } from './frame-loop';
 
 interface InterestFieldProps {
   sim: SimKey;
   /** Changing this starts a fresh instance of the same sim (e.g. a new random graph). */
   variant?: number;
+  paused?: boolean;
   className?: string;
   /** Content shown over the simulation. */
   children?: ReactNode;
@@ -21,17 +23,19 @@ function accentColor(): Rgb {
 
 // A full-bleed canvas running one simulation at a time behind its children.
 // Switching `sim` (or `variant`) fades the old one out and the new one in.
-export default function InterestField({ sim, variant = 0, className, children }: InterestFieldProps) {
+export default function InterestField({ sim, variant = 0, paused = false, className, children }: InterestFieldProps) {
   const rootRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const simRef = useRef<Sim | null>(null);
   const wantedRef = useRef(`${sim}:${variant}`);
   const kickRef = useRef<() => void>(() => {});
+  const pausedRef = useRef(paused);
 
   useEffect(() => {
     wantedRef.current = `${sim}:${variant}`;
+    pausedRef.current = paused;
     kickRef.current();
-  }, [sim, variant]);
+  }, [sim, variant, paused]);
 
   useEffect(() => {
     const root = rootRef.current;
@@ -39,16 +43,13 @@ export default function InterestField({ sim, variant = 0, className, children }:
     const ctx = canvas?.getContext('2d');
     if (!(root && canvas && ctx)) return;
 
-    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const motionPreference = window.matchMedia('(prefers-reduced-motion: reduce)');
     const pointer: Pointer = { x: 0, y: 0, active: false };
     let color = accentColor();
     let width = 0;
     let height = 0;
     let shownKey: string | null = null;
     let fadingOut = false;
-    let raf = 0;
-    let last = 0;
-    let visible = true;
     let fadeTimer = 0;
 
     const paint = () => {
@@ -72,7 +73,7 @@ export default function InterestField({ sim, variant = 0, className, children }:
     const sync = () => {
       const wanted = wantedRef.current;
       if (wanted === shownKey || fadingOut || !width) return;
-      if (!shownKey || reduceMotion) {
+      if (!shownKey || motionPreference.matches || pausedRef.current) {
         mount(wanted);
         return;
       }
@@ -84,24 +85,19 @@ export default function InterestField({ sim, variant = 0, className, children }:
       }, FADE_MS);
     };
 
-    const running = () => visible && !reduceMotion;
-
-    const loop = (now: number) => {
-      raf = 0;
-      const dt = Math.min((now - last) / 1000, 0.05);
-      last = now;
-      if (!running()) return;
+    const clock = createFrameLoop((dt) => {
       simRef.current?.step(dt, pointer);
       paint();
-      raf = requestAnimationFrame(loop);
-    };
+    });
 
     const play = () => {
-      sync();
-      if (!raf && running()) {
-        last = performance.now();
-        raf = requestAnimationFrame(loop);
+      if (pausedRef.current && fadingOut) {
+        window.clearTimeout(fadeTimer);
+        fadingOut = false;
+        mount(wantedRef.current);
       }
+      sync();
+      clock.update({ documentVisible: !document.hidden, reducedMotion: motionPreference.matches, paused: pausedRef.current });
     };
     kickRef.current = play;
 
@@ -112,8 +108,10 @@ export default function InterestField({ sim, variant = 0, className, children }:
       width = rect.width;
       height = rect.height;
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      canvas.width = Math.round(width * dpr);
-      canvas.height = Math.round(height * dpr);
+      const pixelWidth = Math.round(width * dpr);
+      const pixelHeight = Math.round(height * dpr);
+      if (canvas.width !== pixelWidth) canvas.width = pixelWidth;
+      if (canvas.height !== pixelHeight) canvas.height = pixelHeight;
       if (sizeChanged) simRef.current?.resize(width, height);
       sync();
       paint();
@@ -125,15 +123,24 @@ export default function InterestField({ sim, variant = 0, className, children }:
     const resizeObserver = new ResizeObserver(resize);
     resizeObserver.observe(canvas);
     const intersection = new IntersectionObserver(([entry]) => {
-      visible = entry.isIntersecting && !document.hidden;
+      clock.update({ inView: entry.isIntersecting });
       play();
     });
     intersection.observe(root);
     const onVisibility = () => {
-      visible = !document.hidden;
+      if (document.hidden) pointer.active = false;
       play();
     };
     document.addEventListener('visibilitychange', onVisibility);
+    const onMotionChange = () => {
+      if (motionPreference.matches && fadingOut) {
+        window.clearTimeout(fadeTimer);
+        fadingOut = false;
+        mount(wantedRef.current);
+      }
+      play();
+    };
+    motionPreference.addEventListener('change', onMotionChange);
     // Theme switches change the accent color.
     const themeObserver = new MutationObserver(() => {
       color = accentColor();
@@ -158,7 +165,7 @@ export default function InterestField({ sim, variant = 0, className, children }:
       local(event);
       pointer.active = true;
       simRef.current?.press?.(pointer.x, pointer.y);
-      if (!running()) paint();
+      if (!clock.running()) paint();
     };
     const onUp = (event: PointerEvent) => {
       if (event.pointerType !== 'mouse') pointer.active = false;
@@ -170,13 +177,14 @@ export default function InterestField({ sim, variant = 0, className, children }:
     root.addEventListener('pointercancel', onLeave);
 
     return () => {
-      cancelAnimationFrame(raf);
+      clock.dispose();
       window.clearTimeout(fadeTimer);
       kickRef.current = () => {};
       resizeObserver.disconnect();
       intersection.disconnect();
       themeObserver.disconnect();
       document.removeEventListener('visibilitychange', onVisibility);
+      motionPreference.removeEventListener('change', onMotionChange);
       root.removeEventListener('pointermove', onMove);
       root.removeEventListener('pointerleave', onLeave);
       root.removeEventListener('pointerdown', onDown);
@@ -189,9 +197,9 @@ export default function InterestField({ sim, variant = 0, className, children }:
     <div className={cn('relative flex w-full items-center overflow-hidden', className)} ref={rootRef}>
       <div aria-hidden="true" className="interest-field pointer-events-none absolute inset-0">
         <canvas
-          className="h-full w-full opacity-0 transition-opacity ease-out"
+          className="h-full w-full opacity-0 transition-opacity ease-out motion-reduce:transition-none"
           ref={canvasRef}
-          style={{ transitionDuration: `${FADE_MS}ms` }}
+          style={{ transitionDuration: paused ? '0ms' : `${FADE_MS}ms` }}
         />
       </div>
       {children}

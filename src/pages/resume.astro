@@ -1,99 +1,75 @@
 ---
 import Base from '../layouts/Base.astro';
 import fs from 'node:fs';
-import StudiesSentence from '@/components/StudiesSentence';
-import { EDUCATION, EXPERIENCE, RESEARCH, STUDIES } from '../data/resume';
-import { PROJECTS, projectId } from '../data/projects';
-
-// Drop your resume at public/resume.pdf and it replaces the summary below.
+import ResumeExplorer from '../components/resume/ResumeExplorer';
+import { PROJECTS, projectHref } from '../data/projects';
 const hasPdf = fs.existsSync(new URL('../../public/resume.pdf', import.meta.url));
-const link = (name: string) => `/projects/#${projectId({ name })}`;
-const research = RESEARCH.map((r) => ({ title: r.org, detail: r.title, years: r.years, href: link(r.project) }));
-const courses = PROJECTS.filter((p) => p.kind === 'course').map((p) => ({ title: p.name, detail: '', years: p.year ?? '', href: link(p.name) }));
-const linkedLists = [
-  { heading: 'Research', items: research },
-  { heading: 'Course projects', items: courses },
-];
+const courses = PROJECTS.filter((project) => project.kind === 'course');
 ---
 
-<Base title="Resume" description="Education, experience, research, and projects of Jerry Zhang.">
-  <h1 class="font-display text-[clamp(2.75rem,7vw,4.5rem)] font-bold tracking-[-0.04em]">Resume</h1>
-  {hasPdf ? (
-    <>
-      <p class="mt-4 font-display text-base"><a href="/resume.pdf">Download PDF</a></p>
-      <object data="/resume.pdf" type="application/pdf" class="mt-8 h-[80vh] min-h-[32rem] w-full rounded-lg border border-line" aria-label="Resume PDF">
-        <p>This browser can't show the PDF inline. <a href="/resume.pdf">Download the PDF</a> instead.</p>
-      </object>
-    </>
-  ) : (
-    <div class="mt-14 space-y-16">
-      <section class="grid gap-x-12 gap-y-4 md:grid-cols-[11rem_1fr]">
-        <h2 class="text-2xl md:pt-1">Education</h2>
-        <ul class="max-w-[38rem] space-y-3">
-          {EDUCATION.map((e) => (
-            <li>
-              <div class="flex items-baseline justify-between gap-6">
-                <span class="font-display text-xl font-semibold">{e.school}</span>
-                <span class="shrink-0 font-display text-sm text-muted tabular-nums">{e.years}</span>
-              </div>
-              {e.studies && (
-                <div class="text-base text-muted">
-                  <StudiesSentence client:load label={e.studies} studies={STUDIES} />
-                </div>
-              )}
-              {e.details.map((d) => <p class="text-base text-muted">{d}</p>)}
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      {[{ heading: 'Experience', items: EXPERIENCE }].map(({ heading, items }) => (
-        <section class="grid gap-x-12 gap-y-4 md:grid-cols-[11rem_1fr]">
-          <h2 class="text-2xl md:pt-1">{heading}</h2>
-          <ul class="max-w-[38rem] space-y-9">
-            {items.map((e) => (
-              <li>
-                <p class="font-display text-xl font-semibold">
-                  {e.org}
-                  {e.place && <span class="ml-2 font-display text-sm font-normal text-muted">{e.place}</span>}
-                </p>
-                <ul class="mt-2 space-y-4">
-                  {e.roles.map((r) => (
-                    <li>
-                      <div class="flex items-baseline justify-between gap-6">
-                        <span class="italic">{r.title}</span>
-                        <span class="shrink-0 font-display text-sm text-muted tabular-nums">{r.years}</span>
-                      </div>
-                      {r.points && (
-                        <ul class="mt-1.5 list-disc space-y-1 pl-5 text-base marker:text-muted">
-                          {r.points.map((p) => <li>{p}</li>)}
-                        </ul>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              </li>
-            ))}
-          </ul>
-        </section>
-      ))}
-
-      {linkedLists.map(({ heading, items }) => (
-        <section class="grid gap-x-12 gap-y-4 md:grid-cols-[11rem_1fr]">
-          <h2 class="text-2xl md:pt-1">{heading}</h2>
-          <ul class="max-w-[38rem] space-y-3">
-            {items.map((i) => (
-              <li>
-                <div class="flex items-baseline justify-between gap-6">
-                  <a href={i.href} class="text-ink decoration-line hover:text-accent hover:decoration-accent">{i.title}</a>
-                  <span class="shrink-0 font-display text-sm text-muted tabular-nums">{i.years}</span>
-                </div>
-                {i.detail && <p class="text-base text-muted">{i.detail}</p>}
-              </li>
-            ))}
-          </ul>
-        </section>
-      ))}
+<Base title="Resume" description="Education, experience, and research across time and place. Jerry Zhang's resume.">
+  <div class="resume-page">
+    <div class="flex flex-wrap items-end justify-between gap-5">
+      <div>
+        <h1 class="font-display text-[clamp(2.75rem,7vw,4.5rem)] font-bold tracking-[-0.04em]">Resume</h1>
+        <p class="mt-4 max-w-xl text-base text-muted">Education, work, and research—across time and place.</p>
+      </div>
+      <div class="resume-actions flex gap-5 font-display text-sm">
+        {hasPdf && <a href="/resume.pdf" class="inline-flex min-h-11 items-center">Download PDF</a>}
+        <button type="button" id="print-resume" class="min-h-11 text-accent underline underline-offset-4">Print resume</button>
+      </div>
     </div>
-  )}
+    <ResumeExplorer client:load />
+    <section class="mt-16 border-t border-line pt-8" aria-labelledby="course-projects-heading">
+      <div class="grid gap-6 sm:grid-cols-[9rem_1fr]">
+        <h2 id="course-projects-heading" class="text-xl">Course projects</h2>
+        <ul class="space-y-3">
+          {courses.map((project) => <li class="flex items-baseline justify-between gap-5">
+            <a href={projectHref(project.id)} class="text-base text-ink decoration-line hover:text-accent">{project.name}</a>
+            <span class="shrink-0 font-display text-xs text-muted tabular-nums">{project.year}</span>
+          </li>)}
+        </ul>
+      </div>
+    </section>
+  </div>
 </Base>
+
+<script>
+  document.querySelector('#print-resume')?.addEventListener('click', () => window.print());
+  let openedForPrint: HTMLDetailsElement[] = [];
+  window.addEventListener('beforeprint', () => {
+    openedForPrint = [...document.querySelectorAll<HTMLDetailsElement>('.resume-entry details:not([open])')];
+    openedForPrint.forEach((details) => { details.open = true; });
+  });
+  window.addEventListener('afterprint', () => {
+    openedForPrint.forEach((details) => { details.open = false; });
+    openedForPrint = [];
+  });
+</script>
+
+<style is:global>
+  .resume-map-panel { scrollbar-width: thin; scrollbar-color: var(--color-line) transparent; }
+  .map-label { paint-order: stroke; stroke: var(--color-paper); stroke-width: 3px; stroke-linejoin: round; }
+  .map-marker:focus-visible { outline: none; }
+  .map-marker:focus-visible > circle:first-of-type { stroke: var(--color-accent); stroke-width: 2px; stroke-dasharray: 3 3; }
+  @media print {
+    @page { margin: 15mm; }
+    html.dark, html { --color-paper: #fff; --color-ink: #161a24; --color-muted: #444; --color-line: #ddd; --color-accent: #161a24; color-scheme: light; }
+    body { font-size: 10pt; line-height: 1.4; background: white; color: #161a24; }
+    body > header, body > footer, .skip-link, .resume-actions, .resume-controls, .resume-map-panel, .resume-location, .duration-guide, .duration-track, astro-dev-toolbar { display: none !important; }
+    main { max-width: none !important; padding: 0 !important; }
+    .resume-page h1 { font-size: 28pt; }
+    .resume-explorer { margin-top: 1rem; }
+    .resume-explorer > div:last-child { display: block; margin-top: 0; }
+    .resume-entry { break-inside: avoid; border: 0; background: transparent !important; padding: 0.6rem 0; }
+    .resume-entry h3 { color: #161a24 !important; font-size: 12pt; }
+    .resume-entry p, .resume-entry li, .resume-entry a, .resume-entry dd { font-size: 10pt; }
+    .print-location { display: block; font-size: 9pt; color: #444; }
+    .resume-entry details::details-content { content-visibility: visible !important; display: block !important; }
+    .resume-entry details > dl { display: block !important; }
+    .resume-entry details summary { min-height: 0; text-decoration: none; }
+    .resume-entry details dl { margin: 0; border: 0; padding: 0.25rem 0; }
+    .resume-entry details dl > div { display: flex; gap: 0.5rem; margin: 0; }
+    .resume-entry a { text-decoration: none; }
+  }
+</style>

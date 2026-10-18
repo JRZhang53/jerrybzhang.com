@@ -1,0 +1,4 @@
+[submodule "apps/tree-of-life"]
+	path = apps/tree-of-life
+	url = https://github.com/JRZhang53/tree-of-life.git
+	branch = main
