@@ -49,7 +49,7 @@ export const PROJECTS: Project[] = [
   },
   {
     name: 'Pattern formation in nonlinear reaction-diffusion systems',
-    kind: 'research',
+    kind: 'course',
     description:
       'A stochastic look at how patterns emerge in reaction-diffusion systems, using the spatial Gillespie algorithm with τ-leaping and extending standard models with nonlinear diffusion.',
     tags: ['Stochastic simulation'],
