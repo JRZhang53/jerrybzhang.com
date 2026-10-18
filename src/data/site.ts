@@ -2,7 +2,7 @@
 export const SITE = {
   name: 'Jerry Zhang',
   title: 'Jerry Zhang',
-  description: 'Jerry Zhang studies physics and statistics at Harvard and is joining Hudson River Trading as an algorithm developer.',
+  description: 'Jerry Zhang is a senior studying physics and statistics at Harvard.',
   // The line under your name on the home page: the lead-in, then each phrase typed out in turn.
   lead: 'Interested in',
   interests: [
