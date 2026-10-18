@@ -1,8 +1,7 @@
 ---
 import Base from '../layouts/Base.astro';
 import Hero from '@/components/Hero';
-import StudiesSentence from '@/components/StudiesSentence';
-import { SITE, LINKS, STUDIES } from '../data/site';
+import { SITE, LINKS } from '../data/site';
 ---
 
 <Base bleed>
@@ -14,15 +13,11 @@ import { SITE, LINKS, STUDIES } from '../data/site';
       <div class="max-w-[38rem] space-y-5">
         <!-- TODO: add a photo at public/me.jpg and uncomment the line below. -->
         <!-- <img src="/me.jpg" alt="Jerry Zhang" class="size-24 rounded-full object-cover" width="96" height="96" /> -->
-        <div>
-          <StudiesSentence
-            client:load
-            before="I'm a senior studying"
-            label="physics and statistics"
-            after="at Harvard."
-            studies={STUDIES}
-          />
-        </div>
+        <p>
+          I'm a senior studying physics and statistics at Harvard. I'm interested in statistical
+          physics, dynamics, and active matter; materials and energy, semiconductors, and photonics;
+          and information theory, machine learning, and interpretability.
+        </p>
         <p>Outside of class, I play <a href="/pickleball/">pickleball</a>.</p>
         {LINKS.length > 0 && (
           <p class="flex gap-5 font-display text-base">

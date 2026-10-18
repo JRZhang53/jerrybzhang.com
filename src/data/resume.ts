@@ -2,14 +2,19 @@
 export type Role = { title: string; years: string; points?: string[] };
 export type Position = { org: string; place?: string; roles: Role[] };
 
-export const EDUCATION: { school: string; details: string[]; years: string }[] = [
+// Harvard's line unfolds into this breakdown when clicked.
+export const STUDIES = [
+  { field: 'Physics', detail: 'AB, plus a concurrent AM (master’s)' },
+  { field: 'Statistics', detail: 'AB, machine learning track' },
+  { field: 'Computer Science', detail: 'Secondary field' },
+];
+
+export const EDUCATION: { school: string; details: string[]; studies?: string; years: string }[] = [
   {
     school: 'Harvard University',
-    details: [
-      'AB in Physics and Statistics (machine learning track)',
-      'Concurrent AM in Physics',
-      'Secondary in Computer Science',
-    ],
+    details: [],
+    /** Clickable label that unfolds STUDIES. */
+    studies: 'Physics and Statistics',
     years: '2023 – 2027',
   },
   { school: 'University of Minnesota', details: ['Post-Secondary Enrollment Options (PSEO) dual enrollment'], years: '2021 – 2023' },

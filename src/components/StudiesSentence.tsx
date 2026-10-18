@@ -8,17 +8,17 @@ export interface Study {
 }
 
 interface StudiesSentenceProps {
-  before: string;
+  before?: string;
   /** The clickable phrase that unfolds the breakdown. */
   label: string;
-  after: string;
+  after?: string;
   studies: Study[];
 }
 
 const EASE = [0.22, 1, 0.36, 1] as const;
 
-// A plain sentence whose key phrase unfolds into the full degree breakdown,
-// so the details are there for anyone curious without leading the page.
+// A line whose key phrase unfolds into the full degree breakdown, so the
+// details are there for anyone curious without leading the page.
 export default function StudiesSentence({ before, label, after, studies }: StudiesSentenceProps) {
   const [open, setOpen] = useState(false);
   const panelId = useId();
@@ -26,7 +26,7 @@ export default function StudiesSentence({ before, label, after, studies }: Studi
   return (
     <MotionConfig reducedMotion="user">
       <p>
-        {before}{' '}
+        {before && `${before} `}
         <button
           aria-controls={panelId}
           aria-expanded={open}
@@ -43,8 +43,8 @@ export default function StudiesSentence({ before, label, after, studies }: Studi
           >
             <ChevronDown size={16} strokeWidth={2.5} />
           </motion.span>
-        </button>{' '}
-        {after}
+        </button>
+        {after && ` ${after}`}
       </p>
 
       <AnimatePresence initial={false}>

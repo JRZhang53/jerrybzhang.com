@@ -1,7 +1,8 @@
 ---
 import Base from '../layouts/Base.astro';
 import fs from 'node:fs';
-import { EDUCATION, EXPERIENCE, RESEARCH } from '../data/resume';
+import StudiesSentence from '@/components/StudiesSentence';
+import { EDUCATION, EXPERIENCE, RESEARCH, STUDIES } from '../data/resume';
 import { PROJECTS, projectId } from '../data/projects';
 
 // Drop your resume at public/resume.pdf and it replaces the summary below.
@@ -35,6 +36,11 @@ const linkedLists = [
                 <span class="font-display text-xl font-semibold">{e.school}</span>
                 <span class="shrink-0 font-display text-sm text-muted tabular-nums">{e.years}</span>
               </div>
+              {e.studies && (
+                <div class="text-base text-muted">
+                  <StudiesSentence client:load label={e.studies} studies={STUDIES} />
+                </div>
+              )}
               {e.details.map((d) => <p class="text-base text-muted">{d}</p>)}
             </li>
           ))}
