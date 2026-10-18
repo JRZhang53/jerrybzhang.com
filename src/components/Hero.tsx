@@ -29,7 +29,15 @@ export default function Hero({ name, lead, interests }: HeroProps) {
   // interactive). Resuming starts a fresh typewriter at the next interest.
   const [paused, setPaused] = useState(false);
   const [run, setRun] = useState({ id: 0, startAt: 0 });
+  // Counts trips through the list, so sims can start fresh each cycle (a new
+  // Boltzmann graph), but not every phrase.
+  const [cycle, setCycle] = useState(0);
   const sim = interests[index]?.sim ?? interests[0].sim;
+
+  const onPhraseStart = (next: number) => {
+    if (next < index) setCycle((c) => c + 1);
+    setIndex(next);
+  };
 
   const togglePaused = () => {
     if (paused) setRun({ id: run.id + 1, startAt: (index + 1) % interests.length });
@@ -46,7 +54,7 @@ export default function Hero({ name, lead, interests }: HeroProps) {
         };
 
   return (
-    <InterestField className="min-h-[clamp(440px,64vh,640px)]" sim={sim} variant={sim === 'boltzmann' ? index : 0}>
+    <InterestField className="min-h-[clamp(440px,64vh,640px)]" sim={sim} variant={cycle}>
       <div className="relative mx-auto w-full max-w-5xl px-5 text-ink sm:px-8">
         <motion.h1
           className="font-display text-[clamp(3.25rem,11vw,7.5rem)] font-bold leading-[0.92] tracking-[-0.045em]"
@@ -66,7 +74,7 @@ export default function Hero({ name, lead, interests }: HeroProps) {
               as="span"
               className="w-auto justify-start"
               key={run.id}
-              onPhraseStart={setIndex}
+              onPhraseStart={onPhraseStart}
               sequences={interests.map(({ text }) => ({ text, deleteAfter: true, pauseAfter: 2600 }))}
               startAt={run.startAt}
               startDelay={run.id === 0 ? 1400 : 250}
