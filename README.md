@@ -9,6 +9,7 @@ Personal website, built with [Astro](https://astro.build), [Motion](https://moti
 | Name, typewriter phrases, social links, nav | `src/data/site.ts` |
 | Bio | `src/pages/index.astro` |
 | Projects | `src/data/projects.ts` |
+| Pickleball posts | Copy `src/content/pickleball/example-post.md` to a new `.md` file and remove `draft: true`. Photos go in `public/pickleball/`. |
 | Resume | Drop a PDF at `public/resume.pdf` |
 | Photo | Drop it at `public/me.jpg`, then uncomment the `<img>` in `src/pages/index.astro` |
 | Colors and fonts | `src/styles/global.css` (the `@theme` block) |

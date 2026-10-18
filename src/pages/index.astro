@@ -15,6 +15,7 @@ import { PROJECTS } from '../data/projects';
         <!-- TODO: add a photo at public/me.jpg and uncomment the line below. -->
         <!-- <img src="/me.jpg" alt="Jerry Zhang" class="size-24 rounded-full object-cover" width="96" height="96" /> -->
         <p>I'm a senior studying physics and statistics at Harvard.</p>
+        <p class="text-muted">I also helped organize HackHarvard, Harvard's student hackathon.</p>
         {LINKS.length > 0 && (
           <p class="flex gap-5 font-display text-base">
             {LINKS.map((l) => <a href={l.href}>{l.label}</a>)}

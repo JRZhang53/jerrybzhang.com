@@ -36,30 +36,6 @@ export const EXPERIENCE: Position[] = [
       },
     ],
   },
-  {
-    org: 'HackHarvard',
-    place: 'Cambridge, MA',
-    roles: [
-      {
-        title: 'Advisory Board',
-        years: '2025 – 2026',
-        points: [
-          'Advised planning of HackHarvard 2025.',
-          'Directed and coordinated HackHarvard events in China, Greece, Turkey, Saudi Arabia, Vietnam, and Mexico.',
-        ],
-      },
-      {
-        title: 'Co-Director',
-        years: '2023 – 2024',
-        points: ['Directed Harvard’s annual hackathon, led the undergraduate organizing team, and supervised event-day planning.'],
-      },
-      {
-        title: 'Logistics Organizer',
-        years: '2023',
-        points: ['Ran registration, food, inventory, and competition-day logistics for 700+ competitors, staff, sponsors, and judges.'],
-      },
-    ],
-  },
 ];
 
 export const RESEARCH: Position[] = [

@@ -28,4 +28,5 @@ export const NAV = {
   '/': { name: 'About' },
   '/projects': { name: 'Projects' },
   '/resume': { name: 'Resume' },
+  '/pickleball': { name: 'Pickleball' },
 };
