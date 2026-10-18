@@ -12,7 +12,7 @@ export const EDUCATION: { school: string; details: string[]; years: string }[] =
     ],
     years: '2023 – 2027',
   },
-  { school: 'University of Minnesota', details: [], years: '2021 – 2023' },
+  { school: 'University of Minnesota', details: ['Post-Secondary Enrollment Options (PSEO), taking college courses during high school'], years: '2021 – 2023' },
   { school: 'Minnetonka Senior High School', details: ['High school diploma'], years: '2019 – 2023' },
 ];
 
