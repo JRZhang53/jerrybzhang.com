@@ -1,8 +1,12 @@
-// Add, remove, or reorder projects here. /projects lists them in this order, split by `kind`,
-// and the first three of kind 'project' also appear on the home page.
+// Add, remove, or reorder projects here. /projects groups them by `kind`, in this order:
+//   'research' – research work
+//   'course'   – final projects for classes
+//   'side'     – small things built for fun. Host each one in public/fun/<name>/ (an index.html
+//                plus any scripts or assets) and set href to '/fun/<name>/'. This section only
+//                appears once there's at least one side project.
 export type Project = {
   name: string;
-  kind: 'research' | 'project';
+  kind: 'research' | 'course' | 'side';
   description: string;
   tags?: string[];
   href?: string; // live site, paper, or demo
@@ -13,7 +17,7 @@ export type Project = {
 export const PROJECTS: Project[] = [
   {
     name: 'Latent structure in protein sequences via HMMs',
-    kind: 'project',
+    kind: 'course',
     description:
       'How much of a protein’s 3D organization can a simple, interpretable model recover? Unsupervised hidden Markov models find recurring biochemical patterns in amino-acid sequences, and I compare their latent states against hydrophobicity, secondary structure, and solvent accessibility, alongside composition-based and supervised baselines.',
     tags: ['Statistics', 'Computational biology'],
@@ -21,7 +25,7 @@ export const PROJECTS: Project[] = [
   },
   {
     name: 'Optimization and sampling in spin glasses',
-    kind: 'project',
+    kind: 'course',
     description:
       'Competing interactions give spin glasses rugged energy landscapes full of local minima. This project measures how temperature, disorder, and interaction structure affect discrete and gradient-based algorithms across four canonical spin models, and when each one gets trapped.',
     tags: ['Optimization', 'Statistical physics'],
@@ -29,7 +33,7 @@ export const PROJECTS: Project[] = [
   },
   {
     name: 'Multiple descent for minimum ℓ₁-norm interpolators',
-    kind: 'project',
+    kind: 'course',
     description:
       'Heavily overparameterized models can keep improving well past the interpolation threshold. I reproduce prior multiple-descent results for Gaussian designs and extend them to study how signal sparsity and feature distributions drive a further drop in test error.',
     tags: ['Statistical learning theory'],
@@ -37,7 +41,7 @@ export const PROJECTS: Project[] = [
   },
   {
     name: 'Feedback and torsional growth of a 1D filament',
-    kind: 'project',
+    kind: 'course',
     description:
       'Growing filaments can buckle and twist under mechanical constraints. Using simulations of a filament attached to a substrate, I test whether stress-based feedback on growth can keep it straight and stable.',
     tags: ['Biophysics', 'Simulation'],
@@ -45,7 +49,7 @@ export const PROJECTS: Project[] = [
   },
   {
     name: 'Pattern formation in nonlinear reaction-diffusion systems',
-    kind: 'project',
+    kind: 'research',
     description:
       'A stochastic look at how patterns emerge in reaction-diffusion systems, using the spatial Gillespie algorithm with τ-leaping and extending standard models with nonlinear diffusion.',
     tags: ['Stochastic simulation'],

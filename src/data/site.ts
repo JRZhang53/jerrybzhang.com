@@ -16,6 +16,13 @@ export const SITE = {
   ],
 };
 
+// The degree breakdown that unfolds from "physics and statistics" in the About section.
+export const STUDIES = [
+  { field: 'Physics', detail: 'AB, plus a concurrent AM (master’s)' },
+  { field: 'Statistics', detail: 'AB, machine learning track' },
+  { field: 'Computer Science', detail: 'Secondary field' },
+];
+
 // Remove any link you don't want to show. Leave `href` empty to hide it.
 export const LINKS = [
   { label: 'GitHub', href: 'https://github.com/JRZhang53' },
@@ -28,5 +35,4 @@ export const NAV = {
   '/': { name: 'About' },
   '/projects': { name: 'Projects' },
   '/resume': { name: 'Resume' },
-  '/pickleball': { name: 'Pickleball' },
 };

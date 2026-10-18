@@ -1,8 +1,8 @@
 ---
 import Base from '../layouts/Base.astro';
 import Hero from '@/components/Hero';
-import { SITE, LINKS } from '../data/site';
-import { PROJECTS } from '../data/projects';
+import StudiesSentence from '@/components/StudiesSentence';
+import { SITE, LINKS, STUDIES } from '../data/site';
 ---
 
 <Base bleed>
@@ -14,33 +14,21 @@ import { PROJECTS } from '../data/projects';
       <div class="max-w-[38rem] space-y-5">
         <!-- TODO: add a photo at public/me.jpg and uncomment the line below. -->
         <!-- <img src="/me.jpg" alt="Jerry Zhang" class="size-24 rounded-full object-cover" width="96" height="96" /> -->
-        <p>I'm a senior studying physics and statistics at Harvard.</p>
-        <p class="text-muted">I also helped organize HackHarvard, Harvard's student hackathon.</p>
+        <div>
+          <StudiesSentence
+            client:load
+            before="I'm a senior studying"
+            label="physics and statistics"
+            after="at Harvard."
+            studies={STUDIES}
+          />
+        </div>
+        <p>Outside of class, I play <a href="/pickleball/">pickleball</a>.</p>
         {LINKS.length > 0 && (
           <p class="flex gap-5 font-display text-base">
             {LINKS.map((l) => <a href={l.href}>{l.label}</a>)}
           </p>
         )}
-      </div>
-    </section>
-
-    <section class="mt-24 grid gap-x-12 gap-y-4 md:grid-cols-[11rem_1fr]">
-      <h2 class="text-2xl md:pt-1">Projects</h2>
-      <div>
-        <ul class="divide-y divide-line border-y border-line">
-          {PROJECTS.filter((p) => p.kind === 'project').slice(0, 3).map((p) => (
-            <li class="grid grid-cols-[1fr_auto] gap-x-6 py-4">
-              {p.href ? (
-                <a href={p.href} class="font-display text-xl font-semibold text-ink no-underline hover:text-accent">{p.name}</a>
-              ) : (
-                <span class="font-display text-xl font-semibold">{p.name}</span>
-              )}
-              {p.year && <span class="font-display text-sm text-muted tabular-nums">{p.year}</span>}
-              <p class="col-span-2 mt-1 text-base text-muted">{p.description}</p>
-            </li>
-          ))}
-        </ul>
-        <p class="mt-4 font-display text-base"><a href="/projects/">See all projects</a></p>
       </div>
     </section>
   </div>

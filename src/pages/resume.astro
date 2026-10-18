@@ -10,7 +10,7 @@ const positions = [
   { heading: 'Experience', items: EXPERIENCE },
   { heading: 'Research', items: RESEARCH },
 ];
-const projects = PROJECTS.filter((p) => p.kind === 'project');
+const projects = PROJECTS.filter((p) => p.kind === 'course');
 ---
 
 <Base title="Resume" description="Education, experience, research, and projects of Jerry Zhang.">
@@ -33,7 +33,7 @@ const projects = PROJECTS.filter((p) => p.kind === 'project');
                 <span class="font-display text-xl font-semibold">{e.school}</span>
                 <span class="shrink-0 font-display text-sm text-muted tabular-nums">{e.years}</span>
               </div>
-              {e.detail && <p class="text-base text-muted">{e.detail}</p>}
+              {e.details.map((d) => <p class="text-base text-muted">{d}</p>)}
             </li>
           ))}
         </ul>
@@ -71,7 +71,7 @@ const projects = PROJECTS.filter((p) => p.kind === 'project');
       ))}
 
       <section class="grid gap-x-12 gap-y-4 md:grid-cols-[11rem_1fr]">
-        <h2 class="text-2xl md:pt-1">Projects</h2>
+        <h2 class="text-2xl md:pt-1">Course projects</h2>
         <div class="max-w-[38rem]">
           <ul class="space-y-2">
             {projects.map((p) => (

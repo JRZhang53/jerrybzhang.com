@@ -2,10 +2,18 @@
 export type Role = { title: string; years: string; points?: string[] };
 export type Position = { org: string; place?: string; roles: Role[] };
 
-export const EDUCATION = [
-  { school: 'Harvard University', detail: 'AB, Physics and Statistics (double concentration)', years: '2023 – 2027' },
-  { school: 'University of Minnesota', detail: '', years: '2021 – 2023' },
-  { school: 'Minnetonka Senior High School', detail: 'High school diploma', years: '2019 – 2023' },
+export const EDUCATION: { school: string; details: string[]; years: string }[] = [
+  {
+    school: 'Harvard University',
+    details: [
+      'AB in Physics and Statistics (machine learning track)',
+      'Concurrent AM in Physics',
+      'Secondary in Computer Science',
+    ],
+    years: '2023 – 2027',
+  },
+  { school: 'University of Minnesota', details: [], years: '2021 – 2023' },
+  { school: 'Minnetonka Senior High School', details: ['High school diploma'], years: '2019 – 2023' },
 ];
 
 export const EXPERIENCE: Position[] = [
