@@ -14,7 +14,7 @@ export interface Sim {
   press?(x: number, y: number): void;
 }
 
-export type SimKey = 'spins' | 'swarm' | 'waveguide' | 'boltzmann';
+export type SimKey = 'spins' | 'swarm' | 'photonics' | 'boltzmann';
 
 const rgb = ([r, g, b]: Rgb) => `rgb(${r}, ${g}, ${b})`;
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
@@ -23,18 +23,32 @@ const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v
 const rightBias = (width: number) => (width >= 768 ? 0.42 : 0.06);
 
 // ---------------------------------------------------------------------------
-// Ising model: Metropolis updates on a square lattice just above the critical
-// temperature, where domains of every size form and dissolve. The pointer
-// heats the spins around it.
+// Ising model: Metropolis updates on a square lattice near the critical
+// temperature, where domains of every size form and dissolve. Updates run
+// slowly and each cell fades between states, so nothing flickers. The pointer
+// is a magnetic field: spins under it align, leaving a trail that slowly
+// melts back into the domains.
 
-const T_BASE = 2.35;
+const T_BASE = 2.3;
+/** Lattice sweeps per second. Slow on purpose: domains drift rather than churn. */
+const SWEEPS_PER_SECOND = 1.4;
+/** How fast a cell's drawn state follows its spin (per second). Low = gentle fades. */
+const FADE_RATE = 3.5;
+const LEVELS = 8;
+/** Field strength at the pointer, in units of the coupling J. */
+const FIELD = 6;
 
 export class SpinLattice implements Sim {
   private cols = 0;
   private rows = 0;
   private cell = 13;
   private spins = new Int8Array(0);
+  /** Drawn state per cell, easing from -1 (down) to 1 (up). */
+  private shown = new Float32Array(0);
   private boltz = { 4: 0, 8: 0 } as Record<number, number>;
+  private pending = 0;
+  /** Where the field is, and how visible its ring is (eases in and out). */
+  private magnet = { x: 0, y: 0, shown: 0 };
 
   resize(width: number, height: number) {
     this.cell = clamp(Math.round(width / 95), 10, 15);
@@ -44,61 +58,102 @@ export class SpinLattice implements Sim {
     for (let i = 0; i < this.spins.length; i++) this.spins[i] = Math.random() < 0.5 ? 1 : -1;
     this.boltz = { 4: Math.exp(-4 / T_BASE), 8: Math.exp(-8 / T_BASE) };
     // Settle into critical-looking domains before the first frame.
-    for (let i = 0; i < 40; i++) this.sweep(1, null);
+    for (let i = 0; i < 60; i++) this.sweep(1, null);
+    this.shown = Float32Array.from(this.spins);
+  }
+
+  /** One Metropolis attempt at cell (x, y), with field `h` pushing spins up. */
+  private attempt(x: number, y: number, h: number) {
+    const { cols, rows, spins } = this;
+    const i = y * cols + x;
+    const s = spins[i];
+    const sum =
+      spins[y * cols + ((x + 1) % cols)] +
+      spins[y * cols + ((x - 1 + cols) % cols)] +
+      spins[((y + 1) % rows) * cols + x] +
+      spins[((y - 1 + rows) % rows) * cols + x];
+    const dE = 2 * s * (sum + h);
+    if (dE <= 0 || Math.random() < (h === 0 ? this.boltz[dE] : Math.exp(-dE / T_BASE))) {
+      spins[i] = -s as -1 | 1;
+    }
+  }
+
+  private fieldAt(x: number, y: number, pointer: Pointer | null) {
+    if (!pointer?.active) return 0;
+    const radius = 5 * this.cell;
+    const d = Math.hypot((x + 0.5) * this.cell - pointer.x, (y + 0.5) * this.cell - pointer.y);
+    return d < radius ? FIELD * (1 - d / radius) : 0;
   }
 
   private sweep(fraction: number, pointer: Pointer | null) {
-    const { cols, rows, spins, cell } = this;
-    const n = cols * rows;
+    const n = this.cols * this.rows;
     const attempts = Math.floor(n * fraction);
-    const heat = pointer?.active ? pointer : null;
-    const radius = 7 * cell;
     for (let a = 0; a < attempts; a++) {
       const i = (Math.random() * n) | 0;
-      const x = i % cols;
-      const y = (i / cols) | 0;
-      const s = spins[i];
-      const sum =
-        spins[y * cols + ((x + 1) % cols)] +
-        spins[y * cols + ((x - 1 + cols) % cols)] +
-        spins[((y + 1) % rows) * cols + x] +
-        spins[((y - 1 + rows) % rows) * cols + x];
-      const dE = 2 * s * sum;
-      if (dE <= 0) {
-        spins[i] = -s as -1 | 1;
-        continue;
-      }
-      let p = this.boltz[dE];
-      if (heat) {
-        const d = Math.hypot((x + 0.5) * cell - heat.x, (y + 0.5) * cell - heat.y);
-        if (d < radius) p = Math.exp(-dE / (T_BASE + 7 * (1 - d / radius)));
-      }
-      if (Math.random() < p) spins[i] = -s as -1 | 1;
+      const x = i % this.cols;
+      const y = (i / this.cols) | 0;
+      this.attempt(x, y, this.fieldAt(x, y, pointer));
+    }
+  }
+
+  /** Extra updates right around the pointer, so the field acts at once. */
+  private sweepNear(pointer: Pointer, count: number) {
+    const reach = 5;
+    const cx = Math.floor(pointer.x / this.cell);
+    const cy = Math.floor(pointer.y / this.cell);
+    for (let a = 0; a < count; a++) {
+      const x = cx + Math.round((Math.random() * 2 - 1) * reach);
+      const y = cy + Math.round((Math.random() * 2 - 1) * reach);
+      if (x < 0 || y < 0 || x >= this.cols || y >= this.rows) continue;
+      this.attempt(x, y, this.fieldAt(x, y, pointer));
     }
   }
 
   step(dt: number, pointer: Pointer) {
-    this.sweep(clamp(dt * 60, 0, 2) * 0.35, pointer);
+    // Accumulate fractional sweeps so the rate holds at any frame rate.
+    this.pending += dt * SWEEPS_PER_SECOND;
+    const whole = Math.floor(this.pending * 100) / 100;
+    if (whole > 0) {
+      this.sweep(whole, pointer);
+      this.pending -= whole;
+    }
+    if (pointer.active) {
+      this.sweepNear(pointer, Math.round(dt * 2400));
+      this.magnet.x = pointer.x;
+      this.magnet.y = pointer.y;
+    }
+    this.magnet.shown += ((pointer.active ? 1 : 0) - this.magnet.shown) * (1 - Math.exp(-dt * 6));
+    const ease = 1 - Math.exp(-dt * FADE_RATE);
+    const { shown, spins } = this;
+    for (let i = 0; i < shown.length; i++) shown[i] += (spins[i] - shown[i]) * ease;
   }
 
   draw(ctx: CanvasRenderingContext2D, color: Rgb) {
-    const { cols, rows, spins, cell } = this;
+    const { cols, rows, shown, cell } = this;
     ctx.fillStyle = rgb(color);
     const big = cell - 4;
     const small = Math.max(1.5, cell * 0.16);
-    ctx.globalAlpha = 0.3;
-    for (let y = 0; y < rows; y++) {
-      for (let x = 0; x < cols; x++) {
-        if (spins[y * cols + x] > 0) ctx.fillRect(x * cell + 2, y * cell + 2, big, big);
-      }
-    }
-    ctx.globalAlpha = 0.2;
-    for (let y = 0; y < rows; y++) {
-      for (let x = 0; x < cols; x++) {
-        if (spins[y * cols + x] < 0) {
-          ctx.fillRect((x + 0.5) * cell - small / 2, (y + 0.5) * cell - small / 2, small, small);
+    // Bucket cells by how "up" they look, so each level is drawn in one pass.
+    for (let level = 0; level < LEVELS; level++) {
+      const t = level / (LEVELS - 1);
+      const size = small + (big - small) * t;
+      ctx.globalAlpha = 0.16 + 0.14 * t;
+      for (let y = 0; y < rows; y++) {
+        for (let x = 0; x < cols; x++) {
+          const u = (shown[y * cols + x] + 1) / 2;
+          if (Math.round(u * (LEVELS - 1)) !== level) continue;
+          ctx.fillRect((x + 0.5) * cell - size / 2, (y + 0.5) * cell - size / 2, size, size);
         }
       }
+    }
+    // A faint ring marks the field's reach, so the cursor reads as a magnet.
+    if (this.magnet.shown > 0.01) {
+      ctx.strokeStyle = rgb(color);
+      ctx.lineWidth = 1.5;
+      ctx.globalAlpha = 0.5 * this.magnet.shown;
+      ctx.beginPath();
+      ctx.arc(this.magnet.x, this.magnet.y, 5 * cell, 0, Math.PI * 2);
+      ctx.stroke();
     }
     ctx.globalAlpha = 1;
   }
@@ -215,311 +270,454 @@ export class Swarm implements Sim {
 }
 
 // ---------------------------------------------------------------------------
-// Waveguide: a 2D scalar wave equation (finite differences) with a slower,
-// higher-index core bent into an S. Light launched at the left stays in the
-// core by total internal reflection. The pointer drops ripples into the field.
+// Photonic circuit: a small chip layout. Light enters through a grating
+// coupler, splits at a Y-branch, and runs along two buses past add-drop ring
+// resonators, a directional coupler, and an all-pass ring. Each ring's
+// resonance drifts slowly; on resonance (a Lorentzian line) it pulls light out
+// of the bus into its drop port. Hovering a ring heats it onto resonance.
+// Brightness follows smoothed optical power, so nothing strobes; small dots
+// drift along each guide to show which way light flows.
 
-const N_CORE = 1.7;
+type Pt = [number, number];
 
-export class Waveguide implements Sim {
-  private cell = 5;
-  private cols = 0;
-  private rows = 0;
-  private u = new Float32Array(0);
-  private prev = new Float32Array(0);
-  private k2 = new Float32Array(0);
-  private damp = new Float32Array(0);
-  private center: number[] = [];
-  private halfWidth = 4;
-  private readonly edge = 14;
+/** Sample a straight line from a to b. */
+function line(a: Pt, b: Pt, step = 6): Pt[] {
+  const n = Math.max(1, Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) / step));
+  return Array.from({ length: n + 1 }, (_, i) => [a[0] + ((b[0] - a[0]) * i) / n, a[1] + ((b[1] - a[1]) * i) / n] as Pt);
+}
+
+/** Sample a smooth S-bend from a to b (cosine easing in y). */
+function sbend(a: Pt, b: Pt, step = 4): Pt[] {
+  const n = Math.max(2, Math.ceil(Math.abs(b[0] - a[0]) / step));
+  return Array.from({ length: n + 1 }, (_, i) => {
+    const t = i / n;
+    return [a[0] + (b[0] - a[0]) * t, a[1] + ((b[1] - a[1]) * (1 - Math.cos(Math.PI * t))) / 2] as Pt;
+  });
+}
+
+/** Join path pieces, dropping each piece's duplicated first point. */
+function path(...pieces: Pt[][]): Pt[] {
+  return pieces.flatMap((p, i) => (i === 0 ? p : p.slice(1)));
+}
+
+interface Guide {
+  pts: Pt[];
+  /** Cumulative length at each point, for placing flow dots. */
+  len: number[];
+  /** Power carried, 0..1, eased toward its target. */
+  shown: number;
+  target: number;
+}
+
+interface Ring {
+  x: number;
+  y: number;
+  r: number;
+  /** Resonance drift: detuning = amp * sin(2π t / period + phase). */
+  period: number;
+  phase: number;
+  /** Current detuning, in linewidths, eased toward its target. */
+  detune: number;
+  /** Fraction of incoming light the ring takes (Lorentzian in detuning). */
+  take: number;
+  /** Light circulating in the ring, 0..1, eased. */
+  glow: number;
+  hovered: boolean;
+}
+
+const FLOW_SPEED = 46;
+const DOT_SPACING = 30;
+const DRIFT_AMPLITUDE = 4.5;
+const POWER_RATE = 3;
+
+export class PhotonicCircuit implements Sim {
+  private guides: Record<string, Guide> = {};
+  private rings: Ring[] = [];
+  private couplers: { at: Pt; out: boolean; guide: string }[] = [];
   private t = 0;
-  private dropClock = 0;
-  private image: ImageData | null = null;
-  private buffer: HTMLCanvasElement | null = null;
-  private w = 0;
-  private h = 0;
+  private hoverRadius = 30;
 
   resize(width: number, height: number) {
-    this.w = width;
-    this.h = height;
-    this.cell = width < 600 ? 4 : 5;
-    const cols = (this.cols = Math.ceil(width / this.cell));
-    const rows = (this.rows = Math.ceil(height / this.cell));
-    const n = cols * rows;
-    this.u = new Float32Array(n);
-    this.prev = new Float32Array(n);
-    this.k2 = new Float32Array(n);
-    this.damp = new Float32Array(n);
-    this.halfWidth = Math.max(3, Math.round(rows * 0.035));
-    const bendAt = cols * (width >= 768 ? 0.62 : 0.5);
-    const low = rows * 0.8;
-    const high = rows * (width >= 768 ? 0.36 : 0.22);
-    this.center = Array.from({ length: cols }, (_, x) => low - ((low - high) * (1 + Math.tanh((x - bendAt) / (cols * 0.13)))) / 2);
-    const edge = this.edge;
-    for (let y = 0; y < rows; y++) {
-      for (let x = 0; x < cols; x++) {
-        const i = y * cols + x;
-        const inCore = Math.abs(y - this.center[x]) <= this.halfWidth;
-        const c = inCore ? 1 / N_CORE : 1;
-        this.k2[i] = c * c * 0.25; // (c·dt/dx)², with dt = 0.5
-        const d = Math.min(x, y, cols - 1 - x, rows - 1 - y);
-        // Absorbing layer at every edge, so nothing reflects back in, and a
-        // slightly lossy cladding so light that escapes the core fades out.
-        const edgeLoss = d < edge ? 0.06 * (1 - d / edge) ** 2 : 0;
-        const coreDist = Math.abs(y - this.center[x]) - this.halfWidth;
-        const claddingLoss = coreDist > 3 ? Math.min(0.012, 0.0025 * (coreDist - 3)) : 0;
-        this.damp[i] = Math.max(edgeLoss, claddingLoss);
-      }
-    }
-    this.image = new ImageData(cols, rows);
-    this.buffer = document.createElement('canvas');
-    this.buffer.width = cols;
-    this.buffer.height = rows;
-    // Fill the guide before the first frame.
-    for (let i = 0; i < Math.ceil(cols * 3.2); i++) this.tick();
+    const wide = width >= 768;
+    // Wide screens: keep the whole chip clear of the name on the left.
+    const L = wide ? width * 0.56 : width * 0.08;
+    const R = width * 0.97;
+    const T = height * (wide ? 0.13 : 0.1);
+    const B = height * (wide ? 0.86 : 0.9);
+    const X = (u: number) => L + (R - L) * u;
+    const Y = (v: number) => T + (B - T) * v;
+    // Rings shrink on narrow screens so neighbouring parts don't collide.
+    const r = clamp(Math.min((B - T) * 0.085, (R - L) * 0.05), 9, 26);
+    const bendLength = clamp(r * 3, 24, 60);
+    const gap = 4;
+    this.hoverRadius = r * 1.9;
+
+    const inY = Y(0.5);
+    const upY = Y(0.34);
+    const lowY = Y(0.72);
+    const ring1: Pt = [X(0.42), upY - gap - r];
+    const ring2: Pt = [X(0.66), upY - gap - r];
+    const ring3: Pt = [X(0.86), lowY + gap + r];
+    const drop1Y = ring1[1] - r - gap;
+    const drop2Y = ring2[1] - r - gap;
+    const crossY = lowY + gap + 1.5;
+
+    const g = (pts: Pt[]): Guide => {
+      const len = [0];
+      for (let i = 1; i < pts.length; i++) len.push(len[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+      return { pts, len, shown: 0, target: 0 };
+    };
+
+    this.guides = {
+      input: g(line([X(0), inY], [X(0.1), inY])),
+      splitUp: g(sbend([X(0.1), inY], [X(0.24), upY])),
+      splitDown: g(sbend([X(0.1), inY], [X(0.24), lowY])),
+      upA: g(line([X(0.24), upY], [ring1[0], upY])),
+      upB: g(line([ring1[0], upY], [ring2[0], upY])),
+      upC: g(line([ring2[0], upY], [X(1), upY])),
+      drop1Stub: g(line([ring1[0] - r * 1.8, drop1Y], [ring1[0], drop1Y])),
+      drop1: g(
+        path(
+          line([ring1[0], drop1Y], [ring1[0] + r * 1.6, drop1Y]),
+          sbend([ring1[0] + r * 1.6, drop1Y], [ring1[0] + r * 1.6 + bendLength, Y(0.02)]),
+          line([ring1[0] + r * 1.6 + bendLength, Y(0.02)], [X(1), Y(0.02)])
+        )
+      ),
+      drop2Stub: g(line([ring2[0] - r * 1.8, drop2Y], [ring2[0], drop2Y])),
+      drop2: g(line([ring2[0], drop2Y], [X(1), drop2Y])),
+      lowA: g(line([X(0.24), lowY], [X(0.44), lowY])),
+      lowCoupler: g(line([X(0.44), lowY], [X(0.58), lowY])),
+      lowB: g(line([X(0.58), lowY], [ring3[0], lowY])),
+      lowC: g(line([ring3[0], lowY], [X(1), lowY])),
+      crossIn: g(path(line([X(0.3), Y(0.99)], [X(0.32), Y(0.99)]), sbend([X(0.32), Y(0.99)], [X(0.44), crossY]))),
+      crossCoupler: g(line([X(0.44), crossY], [X(0.58), crossY])),
+      crossOut: g(path(sbend([X(0.58), crossY], [X(0.7), Y(0.99)]), line([X(0.7), Y(0.99)], [X(1), Y(0.99)]))),
+    };
+
+    // Keep each ring's drift when resizing, so the light doesn't jump.
+    const old = this.rings;
+    this.rings = [ring1, ring2, ring3].map(([x, y], i) => ({
+      x,
+      y,
+      r,
+      period: old[i]?.period ?? 7 + Math.random() * 4,
+      phase: old[i]?.phase ?? Math.random() * Math.PI * 2,
+      detune: old[i]?.detune ?? DRIFT_AMPLITUDE,
+      take: old[i]?.take ?? 0,
+      glow: old[i]?.glow ?? 0,
+      hovered: false,
+    }));
+    this.couplers = [
+      { at: [X(0), inY], out: false, guide: 'input' },
+      { at: [X(1), upY], out: true, guide: 'upC' },
+      { at: [X(1), Y(0.02)], out: true, guide: 'drop1' },
+      { at: [X(1), drop2Y], out: true, guide: 'drop2' },
+      { at: [X(1), lowY], out: true, guide: 'lowC' },
+      { at: [X(1), Y(0.99)], out: true, guide: 'crossOut' },
+    ];
+    // Start settled rather than fading in from dark.
+    this.solve();
+    for (const guide of Object.values(this.guides)) guide.shown = guide.target;
   }
 
-  private tick() {
-    const { cols, rows, u, prev, k2, damp } = this;
-    // Continuous source just inside the left edge, shaped like the guide's lowest mode.
-    this.t += 0.5;
-    const sx = this.edge + 1;
-    const cy = this.center[sx];
-    for (let dy = -this.halfWidth; dy <= this.halfWidth; dy++) {
-      const y = Math.round(cy + dy);
-      if (y < 1 || y >= rows - 1) continue;
-      const profile = Math.cos((dy / (this.halfWidth + 1)) * (Math.PI / 2));
-      // Ramp up gently: a sudden start sprays light at every angle.
-      const ramp = Math.min(1, this.t / 120);
-      u[y * cols + sx] += 0.35 * ramp * profile * Math.sin(this.t * 0.42);
-    }
-    for (let y = 1; y < rows - 1; y++) {
-      for (let x = 1; x < cols - 1; x++) {
-        const i = y * cols + x;
-        const lap = u[i - 1] + u[i + 1] + u[i - cols] + u[i + cols] - 4 * u[i];
-        // Leapfrog: the step before is no longer needed, so the new field goes there.
-        prev[i] = (2 * u[i] - prev[i] + k2[i] * lap) * (1 - damp[i]);
-      }
-    }
-    // Swap roles: `prev` now holds the newest field.
-    this.u = prev;
-    this.prev = u;
+  /** Steady-state power through the circuit for the rings' current detuning. */
+  private solve() {
+    const [r1, r2, r3] = this.rings;
+    for (const ring of this.rings) ring.take = 1 / (1 + ring.detune * ring.detune);
+    const set = (name: string, p: number) => {
+      this.guides[name].target = p;
+    };
+    set('input', 1);
+    set('splitUp', 0.5);
+    set('splitDown', 0.5);
+    set('upA', 0.5);
+    set('drop1', 0.5 * r1.take);
+    const afterRing1 = 0.5 * (1 - r1.take);
+    set('upB', afterRing1);
+    set('drop2', afterRing1 * r2.take);
+    set('upC', afterRing1 * (1 - r2.take));
+    set('lowA', 0.5);
+    set('lowCoupler', 0.375);
+    set('crossIn', 0);
+    set('drop1Stub', 0);
+    set('drop2Stub', 0);
+    set('crossCoupler', 0.125);
+    set('crossOut', 0.25);
+    set('lowB', 0.25);
+    // The all-pass ring mostly absorbs what it takes.
+    set('lowC', 0.25 * (1 - 0.85 * r3.take));
   }
 
   step(dt: number, pointer: Pointer) {
-    const steps = clamp(Math.round(dt * 60 * 2), 1, 4);
-    for (let s = 0; s < steps; s++) this.tick();
-    this.dropClock -= dt;
-    if (pointer.active && this.dropClock <= 0) {
-      this.dropClock = 0.12;
-      const px = Math.round(pointer.x / this.cell);
-      const py = Math.round(pointer.y / this.cell);
-      for (let dy = -2; dy <= 2; dy++) {
-        for (let dx = -2; dx <= 2; dx++) {
-          const x = px + dx;
-          const y = py + dy;
-          if (x < 1 || y < 1 || x >= this.cols - 1 || y >= this.rows - 1) continue;
-          this.u[y * this.cols + x] += 0.9 * Math.exp(-(dx * dx + dy * dy) / 2);
-        }
-      }
+    this.t += dt;
+    const ease = 1 - Math.exp(-dt * POWER_RATE);
+    for (const ring of this.rings) {
+      ring.hovered = pointer.active && Math.hypot(pointer.x - ring.x, pointer.y - ring.y) < this.hoverRadius;
+      // Hovering heats the ring onto resonance; otherwise it drifts.
+      const target = ring.hovered ? 0 : DRIFT_AMPLITUDE * Math.sin((2 * Math.PI * this.t) / ring.period + ring.phase);
+      ring.detune += (target - ring.detune) * (1 - Math.exp(-dt * 2.5));
     }
+    this.solve();
+    for (const guide of Object.values(this.guides)) guide.shown += (guide.target - guide.shown) * ease;
+    const [r1, r2, r3] = this.rings;
+    const feeds = [0.5 * r1.take, this.guides.upB.target * r2.take, 0.25 * r3.take];
+    this.rings.forEach((ring, i) => {
+      ring.glow += (Math.min(1, feeds[i] * 2.2) - ring.glow) * ease;
+    });
   }
 
   draw(ctx: CanvasRenderingContext2D, color: Rgb) {
-    const { image, buffer, u, cols, rows } = this;
-    if (!image || !buffer) return;
-    const data = image.data;
-    for (let i = 0; i < cols * rows; i++) {
-      const o = i * 4;
-      data[o] = color[0];
-      data[o + 1] = color[1];
-      data[o + 2] = color[2];
-      data[o + 3] = Math.min(200, Math.abs(u[i]) * 240);
-    }
-    buffer.getContext('2d')?.putImageData(image, 0, 0);
-    ctx.imageSmoothingEnabled = true;
-    ctx.drawImage(buffer, 0, 0, cols * this.cell, rows * this.cell);
-    // The core's edges, faintly.
-    ctx.strokeStyle = rgb(color);
-    ctx.globalAlpha = 0.35;
-    ctx.lineWidth = 1;
-    for (const side of [-1, 1]) {
+    const c = rgb(color);
+    ctx.strokeStyle = c;
+    ctx.fillStyle = c;
+    ctx.lineCap = 'round';
+    const level = (p: number) => Math.min(1, p * 1.8);
+
+    const stroke = (pts: Pt[]) => {
       ctx.beginPath();
-      for (let x = 0; x < cols; x += 2) {
-        const y = (this.center[x] + side * (this.halfWidth + 0.5)) * this.cell;
-        if (x === 0) ctx.moveTo(0, y);
-        else ctx.lineTo(x * this.cell, y);
-      }
+      ctx.moveTo(pts[0][0], pts[0][1]);
+      for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
       ctx.stroke();
+    };
+
+    // The chip layout, then the light it carries.
+    for (const guide of Object.values(this.guides)) {
+      ctx.globalAlpha = 0.22;
+      ctx.lineWidth = 1.5;
+      stroke(guide.pts);
+      const p = level(guide.shown);
+      if (p > 0.01) {
+        ctx.globalAlpha = 0.12 + 0.5 * p;
+        ctx.lineWidth = 3;
+        stroke(guide.pts);
+      }
+    }
+
+    // Flow dots, drifting left to right.
+    const offset = (this.t * FLOW_SPEED) % DOT_SPACING;
+    for (const guide of Object.values(this.guides)) {
+      const p = level(guide.shown);
+      if (p < 0.03) continue;
+      ctx.globalAlpha = 0.8 * p;
+      const total = guide.len[guide.len.length - 1];
+      let k = 0;
+      ctx.beginPath();
+      for (let d = offset; d < total; d += DOT_SPACING) {
+        while (k < guide.len.length - 2 && guide.len[k + 1] < d) k++;
+        const span = guide.len[k + 1] - guide.len[k] || 1;
+        const f = (d - guide.len[k]) / span;
+        const x = guide.pts[k][0] + (guide.pts[k + 1][0] - guide.pts[k][0]) * f;
+        const y = guide.pts[k][1] + (guide.pts[k + 1][1] - guide.pts[k][1]) * f;
+        ctx.moveTo(x + 2, y);
+        ctx.arc(x, y, 2, 0, Math.PI * 2);
+      }
+      ctx.fill();
+    }
+
+    // Rings: outline, circulating light, and a heater mark when hovered.
+    for (const ring of this.rings) {
+      ctx.globalAlpha = 0.22;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(ring.x, ring.y, ring.r, 0, Math.PI * 2);
+      ctx.stroke();
+      if (ring.glow > 0.01) {
+        ctx.globalAlpha = 0.12 + 0.55 * ring.glow;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(ring.x, ring.y, ring.r, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.globalAlpha = 0.85 * ring.glow;
+        ctx.beginPath();
+        const count = Math.max(4, Math.round((2 * Math.PI * ring.r) / DOT_SPACING));
+        const spin = (this.t * FLOW_SPEED) / ring.r;
+        for (let i = 0; i < count; i++) {
+          const a = spin + (i / count) * Math.PI * 2;
+          const x = ring.x + Math.cos(a) * ring.r;
+          const y = ring.y + Math.sin(a) * ring.r;
+          ctx.moveTo(x + 2, y);
+          ctx.arc(x, y, 2, 0, Math.PI * 2);
+        }
+        ctx.fill();
+      }
+      if (ring.hovered) {
+        ctx.globalAlpha = 0.5;
+        ctx.lineWidth = 1;
+        ctx.setLineDash([2, 4]);
+        ctx.beginPath();
+        ctx.arc(ring.x, ring.y, ring.r + 8, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+    }
+
+    // Grating couplers: small fans where light enters and leaves the chip.
+    for (const { at, out, guide } of this.couplers) {
+      const p = level(this.guides[guide].shown);
+      ctx.lineWidth = 1.2;
+      for (let i = 1; i <= 3; i++) {
+        ctx.globalAlpha = 0.18 + 0.5 * p * (1 - i * 0.2);
+        ctx.beginPath();
+        const dir = out ? 0 : Math.PI;
+        ctx.arc(at[0] - (out ? 6 : -6), at[1], 4 + i * 3.5, dir - 0.55, dir + 0.55);
+        ctx.stroke();
+      }
     }
     ctx.globalAlpha = 1;
+    ctx.lineCap = 'butt';
   }
 }
 
 // ---------------------------------------------------------------------------
-// Restricted Boltzmann machine: a row of visible units and a row of hidden
-// units, block Gibbs sampled back and forth. Clicking a visible unit clamps it
-// on (click again to release), and the hidden layer follows.
+// Boltzmann machine: units scattered across the space, each wired to a few
+// nearby units with random positive (solid) or negative (dashed) weights.
+// Units update one at a time by Gibbs sampling and fade on and off. Clicking
+// a unit clamps it on (click again to release), and its influence spreads.
 
 const sigmoid = (z: number) => 1 / (1 + Math.exp(-z));
+/** Single-unit updates per second. */
+const UPDATES_PER_SECOND = 9;
 
 export class Boltzmann implements Sim {
-  private nv = 0;
-  private nh = 0;
-  private wts: number[][] = [];
-  private bv: number[] = [];
-  private bh: number[] = [];
-  private v: number[] = [];
-  private h: number[] = [];
-  private shownV: number[] = [];
-  private shownH: number[] = [];
+  private pos: [number, number][] = [];
+  private edges: { a: number; b: number; w: number }[] = [];
+  private neighbors: { j: number; w: number }[][] = [];
+  private bias: number[] = [];
+  private state: number[] = [];
+  private shown: number[] = [];
   private clamped: boolean[] = [];
-  private posV: [number, number][] = [];
-  private posH: [number, number][] = [];
   private clock = 0;
-  private sampleHidden = true;
-  private hover: { layer: 'v' | 'h'; i: number } | null = null;
-  private r = 9;
+  private hover = -1;
+  private r = 8;
+  private width = 0;
+  private height = 0;
 
   resize(width: number, height: number) {
+    // Only rebuild when the layout would change a lot (e.g. rotating a phone).
+    if (this.pos.length && Math.abs(width - this.width) < 80 && Math.abs(height - this.height) < 80) {
+      const sx = width / this.width;
+      const sy = height / this.height;
+      this.pos = this.pos.map(([x, y]) => [x * sx, y * sy]);
+      this.width = width;
+      this.height = height;
+      return;
+    }
+    this.width = width;
+    this.height = height;
     const wide = width >= 768;
-    const nv = wide ? 10 : 7;
-    const nh = wide ? 6 : 4;
-    if (nv !== this.nv) this.init(nv, nh);
-    const left = width * rightBias(width) + width * 0.04;
-    const right = width * (wide ? 0.95 : 0.94);
-    const spread = (count: number, y: number) =>
-      Array.from({ length: count }, (_, i) => [left + ((right - left) * (i + 0.5)) / count, y] as [number, number]);
-    this.posH = spread(nh, height * (wide ? 0.28 : 0.2));
-    this.posV = spread(nv, height * (wide ? 0.76 : 0.84));
-    this.r = wide ? 9 : 7;
+    this.r = wide ? 8 : 6.5;
+    const count = wide ? 24 : 14;
+    const left = width * rightBias(width) + width * 0.05;
+    const right = width * 0.96;
+    const top = height * 0.12;
+    const bottom = height * 0.86;
+    // Scatter units with a minimum spacing so the graph stays readable.
+    const minGap = Math.sqrt(((right - left) * (bottom - top)) / count) * 0.62;
+    const pos: [number, number][] = [];
+    for (let tries = 0; pos.length < count && tries < 4000; tries++) {
+      const p: [number, number] = [left + Math.random() * (right - left), top + Math.random() * (bottom - top)];
+      if (pos.every(([x, y]) => Math.hypot(x - p[0], y - p[1]) > minGap)) pos.push(p);
+    }
+    this.pos = pos;
+    // Wire each unit to its three nearest neighbors (no duplicates).
+    const seen = new Set<string>();
+    this.edges = [];
+    pos.forEach((p, a) => {
+      const nearest = pos
+        .map((q, b) => ({ b, d: Math.hypot(q[0] - p[0], q[1] - p[1]) }))
+        .filter(({ b }) => b !== a)
+        .sort((m, n) => m.d - n.d)
+        .slice(0, 3);
+      for (const { b } of nearest) {
+        const key = a < b ? `${a}-${b}` : `${b}-${a}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        // Mostly excitatory, some inhibitory, so on-clusters form and compete.
+        const w = Math.random() < 0.7 ? 1.4 + Math.random() * 1.8 : -(1.2 + Math.random() * 1.6);
+        this.edges.push({ a, b, w });
+      }
+    });
+    this.neighbors = pos.map(() => []);
+    for (const { a, b, w } of this.edges) {
+      this.neighbors[a].push({ j: b, w });
+      this.neighbors[b].push({ j: a, w });
+    }
+    this.bias = pos.map(() => -1.6 + Math.random() * 0.6);
+    this.state = pos.map(() => (Math.random() < 0.3 ? 1 : 0));
+    this.shown = [...this.state];
+    this.clamped = pos.map(() => false);
   }
 
-  private init(nv: number, nh: number) {
-    this.nv = nv;
-    this.nh = nh;
-    // Each hidden unit likes a contiguous patch of visible units, so samples
-    // show recognizable on/off blocks rather than noise.
-    this.wts = Array.from({ length: nv }, (_, i) =>
-      Array.from({ length: nh }, (_, j) => {
-        const centerOf = ((j + 0.5) / nh) * nv;
-        const near = Math.abs(i + 0.5 - centerOf) < nv / nh;
-        return (near ? 2.6 : -1.2) + (Math.random() - 0.5) * 0.8;
-      })
-    );
-    this.bv = Array.from({ length: nv }, () => -0.6);
-    this.bh = Array.from({ length: nh }, () => -1.2);
-    this.v = Array.from({ length: nv }, () => (Math.random() < 0.4 ? 1 : 0));
-    this.h = Array.from({ length: nh }, () => 0);
-    this.shownV = [...this.v];
-    this.shownH = [...this.h];
-    this.clamped = Array.from({ length: nv }, () => false);
+  private update(i: number) {
+    if (this.clamped[i]) {
+      this.state[i] = 1;
+      return;
+    }
+    let z = this.bias[i];
+    for (const { j, w } of this.neighbors[i]) z += w * this.state[j];
+    this.state[i] = Math.random() < sigmoid(z) ? 1 : 0;
   }
 
   step(dt: number, pointer: Pointer) {
-    this.clock -= dt;
-    if (this.clock <= 0) {
-      this.clock = 0.32;
-      if (this.sampleHidden) {
-        this.h = this.h.map((_, j) => {
-          let z = this.bh[j];
-          for (let i = 0; i < this.nv; i++) z += this.wts[i][j] * this.v[i];
-          return Math.random() < sigmoid(z) ? 1 : 0;
-        });
-      } else {
-        this.v = this.v.map((old, i) => {
-          if (this.clamped[i]) return 1;
-          let z = this.bv[i];
-          for (let j = 0; j < this.nh; j++) z += this.wts[i][j] * this.h[j];
-          return Math.random() < sigmoid(z) ? 1 : 0;
-        });
-      }
-      this.sampleHidden = !this.sampleHidden;
+    this.clock += dt * UPDATES_PER_SECOND;
+    while (this.clock >= 1) {
+      this.clock -= 1;
+      this.update((Math.random() * this.pos.length) | 0);
     }
-    const ease = 1 - Math.exp(-dt * 12);
-    this.shownV = this.shownV.map((s, i) => s + (this.v[i] - s) * ease);
-    this.shownH = this.shownH.map((s, j) => s + (this.h[j] - s) * ease);
-    this.hover = pointer.active ? this.nearest(pointer.x, pointer.y) : null;
+    // Units fade on and off rather than blinking.
+    const ease = 1 - Math.exp(-dt * 3.5);
+    this.shown = this.shown.map((s, i) => s + (this.state[i] - s) * ease);
+    this.hover = pointer.active ? this.nearest(pointer.x, pointer.y) : -1;
   }
 
   private nearest(x: number, y: number) {
-    const hit = (pos: [number, number][]) => pos.findIndex(([px, py]) => Math.hypot(px - x, py - y) < this.r * 2.4);
-    const vi = hit(this.posV);
-    if (vi >= 0) return { layer: 'v' as const, i: vi };
-    const hi = hit(this.posH);
-    if (hi >= 0) return { layer: 'h' as const, i: hi };
-    return null;
+    return this.pos.findIndex(([px, py]) => Math.hypot(px - x, py - y) < this.r * 2.6);
   }
 
   press(x: number, y: number) {
-    const target = this.nearest(x, y);
-    if (target?.layer !== 'v') return;
-    const i = target.i;
+    const i = this.nearest(x, y);
+    if (i < 0) return;
     this.clamped[i] = !this.clamped[i];
-    if (this.clamped[i]) this.v[i] = 1;
+    if (this.clamped[i]) this.state[i] = 1;
   }
 
   draw(ctx: CanvasRenderingContext2D, color: Rgb) {
-    const { posV, posH, shownV, shownH, wts, hover, r } = this;
+    const { pos, edges, shown, hover, r } = this;
+    if (!pos.length) return;
     ctx.strokeStyle = rgb(color);
     ctx.fillStyle = rgb(color);
-    let maxW = 0;
-    for (const row of wts) for (const w of row) maxW = Math.max(maxW, Math.abs(w));
     // Edges: brighter where both ends are on, and around the hovered unit.
-    for (let i = 0; i < posV.length; i++) {
-      for (let j = 0; j < posH.length; j++) {
-        const w = wts[i][j];
-        const touched = hover && ((hover.layer === 'v' && hover.i === i) || (hover.layer === 'h' && hover.i === j));
-        const live = shownV[i] * shownH[j];
-        ctx.globalAlpha = Math.min(0.9, (0.12 + 0.55 * (Math.abs(w) / maxW) * (0.3 + 0.7 * live)) * (touched ? 2 : 1));
-        ctx.lineWidth = w > 0 ? 1.2 : 0.6;
-        ctx.setLineDash(w > 0 ? [] : [3, 4]);
-        ctx.beginPath();
-        ctx.moveTo(posV[i][0], posV[i][1]);
-        ctx.lineTo(posH[j][0], posH[j][1]);
-        ctx.stroke();
-      }
+    for (const { a, b, w } of edges) {
+      const touched = hover === a || hover === b;
+      const live = shown[a] * shown[b];
+      ctx.globalAlpha = Math.min(0.9, (0.14 + 0.5 * live) * (Math.abs(w) / 3.2) * (touched ? 2.4 : 1) + (touched ? 0.15 : 0));
+      ctx.lineWidth = w > 0 ? 1.3 : 0.9;
+      ctx.setLineDash(w > 0 ? [] : [3, 4]);
+      ctx.beginPath();
+      ctx.moveTo(pos[a][0], pos[a][1]);
+      ctx.lineTo(pos[b][0], pos[b][1]);
+      ctx.stroke();
     }
     ctx.setLineDash([]);
-    const node = (p: [number, number], on: number, ring: boolean, highlighted: boolean) => {
+    pos.forEach((p, i) => {
       ctx.globalAlpha = 0.9;
       ctx.lineWidth = 1.5;
       ctx.beginPath();
       ctx.arc(p[0], p[1], r, 0, Math.PI * 2);
       ctx.stroke();
-      if (on > 0.02) {
-        ctx.globalAlpha = 0.85 * on;
+      if (shown[i] > 0.02) {
+        ctx.globalAlpha = 0.85 * shown[i];
         ctx.beginPath();
         ctx.arc(p[0], p[1], r - 2.5, 0, Math.PI * 2);
         ctx.fill();
       }
-      if (ring || highlighted) {
-        ctx.globalAlpha = ring ? 0.9 : 0.4;
+      if (this.clamped[i] || hover === i) {
+        ctx.globalAlpha = this.clamped[i] ? 0.9 : 0.4;
         ctx.beginPath();
         ctx.arc(p[0], p[1], r + 4.5, 0, Math.PI * 2);
         ctx.stroke();
       }
-    };
-    posH.forEach((p, j) => node(p, shownH[j], false, hover?.layer === 'h' && hover.i === j));
-    posV.forEach((p, i) => node(p, shownV[i], this.clamped[i], hover?.layer === 'v' && hover.i === i));
-    // Row labels.
-    ctx.globalAlpha = 0.6;
-    ctx.font = '500 11px "Bricolage Grotesque", system-ui, sans-serif';
-    const label = (text: string, p: [number, number] | undefined) => {
-      if (!p) return;
-      // Beside the row when there's room, otherwise just above its first unit.
-      if (p[0] - r - 12 > 52) {
-        ctx.textAlign = 'right';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(text, p[0] - r - 12, p[1]);
-      } else {
-        ctx.textAlign = 'left';
-        ctx.textBaseline = 'bottom';
-        ctx.fillText(text, p[0] - r, p[1] - r - 8);
-      }
-    };
-    label('hidden', posH[0]);
-    label('visible', posV[0]);
+    });
     ctx.globalAlpha = 1;
   }
 }
@@ -527,18 +725,18 @@ export class Boltzmann implements Sim {
 export const SIMS: Record<SimKey, { create: () => Sim; caption: string }> = {
   spins: {
     create: () => new SpinLattice(),
-    caption: 'Ising spins near the critical temperature. Your cursor heats them.',
+    caption: 'Ising spins near the critical temperature. Your cursor is a magnetic field: spins under it align.',
   },
   swarm: {
     create: () => new Swarm(),
     caption: 'A Vicsek swarm: each agent follows its neighbors. Your cursor scatters them.',
   },
-  waveguide: {
-    create: () => new Waveguide(),
-    caption: 'Light held in an S-bend waveguide. Your cursor drops ripples into the field.',
+  photonics: {
+    create: () => new PhotonicCircuit(),
+    caption: 'A photonic circuit: on resonance, a ring pulls light into its own waveguide. Hover a ring to tune it.',
   },
   boltzmann: {
     create: () => new Boltzmann(),
-    caption: 'A restricted Boltzmann machine, Gibbs sampling. Click a visible unit to clamp it.',
+    caption: 'A Boltzmann machine, Gibbs sampling one unit at a time. Click a unit to clamp it on.',
   },
 };

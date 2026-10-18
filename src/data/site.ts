@@ -7,13 +7,13 @@ export const SITE = {
   description: 'Jerry Zhang is a senior studying physics and statistics at Harvard.',
   // The line under your name on the home page: the lead-in, then each phrase typed out in
   // turn. `sim` picks the simulation behind the hero while that phrase shows:
-  // 'spins' (Ising lattice), 'swarm' (active matter), 'waveguide' (photonics), 'boltzmann' (ML).
+  // 'spins' (Ising lattice), 'swarm' (active matter), 'photonics' (photonic circuit), 'boltzmann' (Boltzmann machine).
   lead: 'Interested in',
   interests: [
     { text: 'statistical physics.', sim: 'spins' },
     { text: 'dynamics and active matter.', sim: 'swarm' },
-    { text: 'materials and energy.', sim: 'waveguide' },
-    { text: 'semiconductors and photonics.', sim: 'waveguide' },
+    { text: 'materials and energy.', sim: 'photonics' },
+    { text: 'semiconductors and photonics.', sim: 'photonics' },
     { text: 'information theory.', sim: 'boltzmann' },
     { text: 'machine learning.', sim: 'boltzmann' },
     { text: 'interpretability.', sim: 'boltzmann' },

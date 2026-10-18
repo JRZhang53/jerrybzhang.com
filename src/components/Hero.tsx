@@ -47,7 +47,7 @@ export default function Hero({ name, lead, interests }: HeroProps) {
           {name}
         </motion.h1>
         <motion.p
-          className="mt-6 flex flex-col font-display text-[clamp(1.35rem,3.2vw,2rem)] font-medium leading-snug sm:flex-row sm:items-baseline sm:gap-x-[0.3em]"
+          className="mt-6 flex select-none flex-col font-display text-[clamp(1.35rem,3.2vw,2rem)] font-medium leading-snug sm:flex-row sm:items-baseline sm:gap-x-[0.3em]"
           {...rise(0.6)}
         >
           <span className="text-muted">{lead}</span>
