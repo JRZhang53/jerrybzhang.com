@@ -27,7 +27,7 @@ import { PROJECTS } from '../data/projects';
       <h2 class="text-2xl md:pt-1">Projects</h2>
       <div>
         <ul class="divide-y divide-line border-y border-line">
-          {PROJECTS.slice(0, 3).map((p) => (
+          {PROJECTS.filter((p) => p.kind === 'project').slice(0, 3).map((p) => (
             <li class="grid grid-cols-[1fr_auto] gap-x-6 py-4">
               {p.href ? (
                 <a href={p.href} class="font-display text-xl font-semibold text-ink no-underline hover:text-accent">{p.name}</a>

@@ -37,6 +37,33 @@ export const EXPERIENCE: Position[] = [
     ],
   },
   {
+    org: 'HackHarvard',
+    place: 'Cambridge, MA',
+    roles: [
+      {
+        title: 'Advisory Board',
+        years: '2025 – 2026',
+        points: [
+          'Advised planning of HackHarvard 2025.',
+          'Directed and coordinated HackHarvard events in China, Greece, Turkey, Saudi Arabia, Vietnam, and Mexico.',
+        ],
+      },
+      {
+        title: 'Co-Director',
+        years: '2023 – 2024',
+        points: ['Directed Harvard’s annual hackathon, led the undergraduate organizing team, and supervised event-day planning.'],
+      },
+      {
+        title: 'Logistics Organizer',
+        years: '2023',
+        points: ['Ran registration, food, inventory, and competition-day logistics for 700+ competitors, staff, sponsors, and judges.'],
+      },
+    ],
+  },
+];
+
+export const RESEARCH: Position[] = [
+  {
     org: 'NASA Langley Research Center',
     place: 'Hampton, VA',
     roles: [
@@ -66,40 +93,6 @@ export const EXPERIENCE: Position[] = [
     ],
   },
   {
-    org: 'HackHarvard',
-    place: 'Cambridge, MA',
-    roles: [
-      {
-        title: 'Advisory Board',
-        years: '2025 – 2026',
-        points: [
-          'Advised planning of HackHarvard 2025.',
-          'Directed and coordinated HackHarvard events in China, Greece, Turkey, Saudi Arabia, Vietnam, and Mexico.',
-        ],
-      },
-      {
-        title: 'Co-Director',
-        years: '2023 – 2024',
-        points: ['Directed Harvard’s annual hackathon, led the undergraduate organizing team, and supervised event-day planning.'],
-      },
-      {
-        title: 'Logistics Organizer',
-        years: '2023',
-        points: ['Ran registration, food, inventory, and competition-day logistics for 700+ competitors, staff, sponsors, and judges.'],
-      },
-    ],
-  },
-  {
-    org: 'HMMT',
-    place: 'Cambridge, MA',
-    roles: [{ title: 'Staff', years: '2023 – 2024' }],
-  },
-  {
-    org: 'RMC Academy',
-    place: 'Northfield, MN',
-    roles: [{ title: 'Art of Sciences Camp Counselor', years: 'Summer 2023' }],
-  },
-  {
     org: 'Stony Brook University',
     roles: [
       {
@@ -114,16 +107,3 @@ export const EXPERIENCE: Position[] = [
     ],
   },
 ];
-
-export const HONORS = [
-  { name: 'USAPhO Bronze Medal (twice)', from: 'American Association of Physics Teachers', year: '2022' },
-  { name: 'Theoretical CS, 1st place', from: 'Carnegie Mellon Informatics and Mathematics Competition', year: '2022' },
-  { name: 'AIME Qualifier; AMC 12 Distinguished Honor Roll', from: 'Mathematical Association of America', year: '' },
-  { name: 'National Merit Scholar', from: 'National Merit Scholarship Corporation', year: '' },
-  { name: 'Math League, 3rd place individual in state (twice)', from: 'Minnesota State High School Mathematics League', year: '' },
-  { name: 'Individual All-Star Award', from: 'Minnesota High School Quiz Bowl League', year: '' },
-  { name: 'National German Exam Gold Medal', from: 'American Association of Teachers of German', year: '' },
-  { name: 'Presidential Volunteer Service Gold Award (twice)', from: '', year: '' },
-];
-
-export const LANGUAGES = ['English (native)', 'Chinese (native)', 'German (elementary)'];
