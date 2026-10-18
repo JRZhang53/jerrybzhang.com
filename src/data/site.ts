@@ -27,6 +27,5 @@ export const LINKS = [
 export const NAV = {
   '/': { name: 'About' },
   '/projects': { name: 'Projects' },
-  '/blog': { name: 'Writing' },
   '/resume': { name: 'Resume' },
 };

@@ -26,7 +26,6 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
     <link rel="canonical" href={canonical} />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="sitemap" href="/sitemap-index.xml" />
-    <link rel="alternate" type="application/rss+xml" title={SITE.title} href="/rss.xml" />
     <meta property="og:title" content={pageTitle} />
     <meta property="og:description" content={description} />
     <meta property="og:url" content={canonical} />
@@ -67,7 +66,6 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
       <span>© {new Date().getFullYear()} {SITE.name}</span>
       <span class="flex gap-5">
         {LINKS.map((l) => <a class="text-muted no-underline hover:text-ink" href={l.href}>{l.label}</a>)}
-        <a class="text-muted no-underline hover:text-ink" href="/rss.xml">RSS</a>
       </span>
     </footer>
   </body>

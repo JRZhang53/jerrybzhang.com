@@ -9,7 +9,6 @@ Personal website, built with [Astro](https://astro.build), [Motion](https://moti
 | Name, typewriter phrases, social links, nav | `src/data/site.ts` |
 | Bio | `src/pages/index.astro` |
 | Projects | `src/data/projects.ts` |
-| Blog posts | `src/content/blog/*.md` (add a new `.md` file) |
 | Resume | Drop a PDF at `public/resume.pdf` |
 | Photo | Drop it at `public/me.jpg`, then uncomment the `<img>` in `src/pages/index.astro` |
 | Colors and fonts | `src/styles/global.css` (the `@theme` block) |

@@ -8,7 +8,4 @@ export default defineConfig({
   site: 'https://jerrybzhang.com',
   integrations: [react(), sitemap()],
   vite: { plugins: [tailwindcss()] },
-  markdown: {
-    shikiConfig: { themes: { light: 'github-light', dark: 'github-dark' } },
-  },
 });
