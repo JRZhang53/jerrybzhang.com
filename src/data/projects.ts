@@ -19,6 +19,17 @@ export type Project = {
 
 export const PROJECTS = [
   {
+    id: 'tree-of-life',
+    name: 'Tree of Life',
+    kind: 'side',
+    description:
+      'A collection of small biology experiments: herd sheep, grow coral, follow ant trails, or see how a vine finds its support. Change the rules and compare what happens across twelve organisms and twenty-eight models.',
+    href: '/fun/tree-of-life/',
+    repo: 'https://github.com/JRZhang53/tree-of-life',
+    tags: ['Biology', 'Simulation'],
+    year: '2026',
+  },
+  {
     id: 'latent-structure-in-protein-sequences-via-hmms',
     name: 'Latent structure in protein sequences via HMMs',
     repo: 'https://github.com/JRZhang53/protein-hmm',
