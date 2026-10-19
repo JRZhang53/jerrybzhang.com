@@ -69,10 +69,10 @@ The ISC notice is retained in `public/licenses/us-atlas.txt`.
 
 ## Figures
 
-Figures were copied without alteration from Jerry's public repositories. Their
+The initial two figures were copied from Jerry's public repositories. Their
 captions describe what the figure depicts, without adding new numerical claims.
 The full-resolution image is linked from the preview and original provenance is
-linked from the caption. No unpublished material or private ideas were used.
+linked from the caption where a public source exists.
 
 - `public/projects/protein-states.png`: `JRZhang53/protein-hmm`, commit
   `b18836da07d9c5300b1f893820a2e641591479d9`,
@@ -80,3 +80,35 @@ linked from the caption. No unpublished material or private ideas were used.
 - `public/projects/quantum-energy.png`: `JRZhang53/ML-for-Quantum-Heisenberg-Model`,
   commit `0bfc7e2de90671df32fb3959ad1a40062d7b3e9d`,
   `G-CNN/energy-sampling-accuracy.png`.
+
+### Course figures
+
+On October 18, 2026, Jerry authorized searching his course files for figures to
+add to Projects. Four images were selected for existing course entries. They
+remain inside the collapsed project details, with native full-size image links,
+descriptive alt text, and course/report credits. The original plots are preserved;
+no data, labels, or colors were redrawn. Only the selected images are bundled,
+not the course directories, notebooks, or complete reports.
+
+Source paths below are relative to the owner's local Schoolwork directory:
+
+- `public/projects/spin-optimization.png`: `6 Spring 2026/Statistics 221/221project/Stat_221_Final_Project_Write_up.pdf`,
+  page 9, Figure 3, embedded image `Im7.png` (2623 × 1823). Extracted directly
+  using pypdf. This is the final-report comparison, not the preliminary plot.
+  The Ising ferromagnet is a baseline within the broader spin-glass project;
+  the caption notes that optimizer step scales differ.
+- `public/projects/interpolation-error.png`: `5 Fall 2025/Applied Math 254/254final/generalization_error_n100_eps0.5_SNR4_sigma1_npn100_nrep100_seed42_gaussian.png`
+  (3600 × 2400), copied unchanged. Caption describes the plotted Gaussian-feature
+  comparison without claiming this particular run demonstrates multiple descents.
+- `public/projects/filament-torsion.png`: `4 Spring 2025/Physics 230/final project/report.pdf`,
+  page 8, Figure 5, embedded image `Im7.png` (1192 × 970). Extracted directly using
+  pypdf. The source report credits Jerry Zhang and Yizhe Sun; the caption retains
+  both names. This figure illustrates the base model's geometry, not a claim of
+  successful feedback control.
+- `public/projects/reaction-diffusion.png`: `3 Fall 2024/Applied Math 207/final project/report/figs/grayscott_equilibria.png`
+  (1655 × 713), copied unchanged. The accompanying `report.tex` identifies the top
+  row as stochastic (τ = 1) and the bottom row as deterministic; columns use
+  (F, k) = (0.03, 0.06), (0.029, 0.057), and (0.03, 0.055).
+
+The two PDF source pages and all four standalone figures were visually inspected.
+Third-party photos and borrowed model diagrams in the reports were not selected.

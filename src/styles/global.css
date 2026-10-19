@@ -98,7 +98,21 @@
 /* Long-form text in pickleball posts. */
 .prose {
   max-width: 38rem;
+  min-width: 0;
 }
+
+/* Match prose scale, preserve math spacing in tracked display headings. */
+.katex { font-size: 1.08em; letter-spacing: normal; text-indent: 0; }
+h1 .katex, h2 .katex, h3 .katex { font-size: 1em; }
+.katex-display {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.4em 0.1em;
+  margin: 1.5em 0;
+}
+.katex-display > .katex { width: max-content; min-width: 100%; }
+.math-copy > p + p { margin-top: 1em; }
 .prose h2 {
   font-size: 1.6rem;
   margin: 2.75rem 0 0.75rem;

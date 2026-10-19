@@ -1,6 +1,7 @@
 ---
 import Base from '../layouts/Base.astro';
 import { PROJECTS, type Project } from '../data/projects';
+import MathText from '../components/MathText.astro';
 
 const projects: readonly Project[] = PROJECTS;
 const groups = [
@@ -18,25 +19,25 @@ const groups = [
       <ol>
         {items.map((p) => <li>
           <details id={p.id} class="project-entry group scroll-mt-8 border-b border-line">
-            <summary class="grid cursor-pointer grid-cols-[minmax(0,1fr)_auto_16px] items-baseline gap-x-4 py-5 sm:gap-x-6">
-              <h3 class="text-[clamp(1.1rem,2.5vw,1.35rem)] leading-snug transition-colors group-hover:text-accent group-open:text-accent">{p.name}</h3>
+            <summary aria-label={p.mathName ? `${p.name}, ${p.year}` : undefined} class="grid cursor-pointer grid-cols-[minmax(0,1fr)_auto_16px] items-baseline gap-x-4 py-5 sm:gap-x-6">
+              <h3 aria-label={p.mathName ? p.name : undefined} class="text-[clamp(1.1rem,2.5vw,1.35rem)] leading-snug transition-colors group-hover:text-accent group-open:text-accent"><MathText text={p.mathName ?? p.name} /></h3>
               <span class="font-display text-xs text-muted tabular-nums">{p.year}</span>
               <svg class="project-chevron self-center text-muted" width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="m5 8 5 5 5-5" /></svg>
             </summary>
             <div class:list={['grid gap-6 pb-8', p.figure && !p.figure.wide && 'md:grid-cols-[1.15fr_1fr] md:gap-10']}>
               <div class="max-w-[40rem]">
-                <p class="text-base leading-relaxed text-pretty text-muted">{p.description}</p>
+                <div class="math-copy text-base leading-relaxed text-pretty text-muted"><MathText text={p.description} inline={false} /></div>
                 {(p.href || p.repo) && <div class="mt-3 flex flex-wrap gap-x-6 font-display text-sm">
                   {p.href && <a class="inline-flex min-h-11 items-center" href={p.href}>{p.kind === 'side' ? 'Explore project' : 'View project'}</a>}
                   {p.repo && <a class="inline-flex min-h-11 items-center" href={p.repo}>View source</a>}
                 </div>}
               </div>
               {p.figure && <figure class="min-w-0">
-                <a href={p.figure.src} aria-label={`Open full-size figure: ${p.figure.caption}`} class="block rounded-md">
+                <a href={p.figure.src} aria-label={`Open full-size figure for ${p.name}`} class="block rounded-md">
                   <img src={p.figure.src} alt={p.figure.alt} width={p.figure.width} height={p.figure.height} loading="lazy" decoding="async"
                     class="h-auto w-full rounded-md bg-white outline outline-black/10 dark:outline-white/10" />
                 </a>
-                <figcaption class="mt-3 text-xs leading-relaxed text-muted">{p.figure.caption} <a href={p.figure.source} class="text-muted">Original figure</a></figcaption>
+                <figcaption class="mt-3 text-xs leading-relaxed text-muted"><MathText text={p.figure.caption} /> {p.figure.credit} {p.figure.source && <a href={p.figure.source} class="text-muted">Original figure</a>}</figcaption>
               </figure>}
             </div>
           </details>

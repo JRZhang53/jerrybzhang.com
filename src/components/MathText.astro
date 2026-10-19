@@ -1,0 +1,10 @@
+---
+import { renderMathText } from '../lib/math';
+
+interface Props {
+  text: string;
+  inline?: boolean;
+}
+const { text, inline = true } = Astro.props;
+---
+<Fragment set:html={renderMathText(text, inline)} />

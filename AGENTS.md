@@ -40,6 +40,11 @@ instructions take precedence.
   project. The quantum many-body project is dated 2024.
 - Pickleball is linked from the biography and has its own subtree, without a
   top-level navigation tab.
+- The second About paragraph links pickleball, trivia, and worldbuilding
+  separately. Trivia links to `/history-geography/`, a minimal collection of
+  games and small projects; worldbuilding links to `/worldbuilding/`.
+  Add confirmed public links in `src/data/history-geography.ts`; do not invent
+  entries. Keep this collection out of the top-level navigation.
 - The expandable degree breakdown belongs under Harvard on Resume: Physics AB
   plus concurrent AM, Statistics AB with ML track, CS secondary. Minnesota is
   PSEO dual enrollment.
@@ -71,6 +76,10 @@ instructions take precedence.
 - `src/data/projects.ts`: project content, stable IDs, and typed `projectHref()`.
   `src/pages/projects.astro` groups and renders it. Keep IDs unchanged when
   renaming titles; `src/data/resume.ts` references IDs, not title copies.
+- Math uses build-time KaTeX with locally bundled fonts and MathML. Use
+  `MathText.astro` in templates and `$...$` / display `$$` in Markdown; see
+  `docs/math.md`. Preserve plain accessible labels and project IDs. Do not add
+  client-side auto-render scripts or silently publish invalid TeX.
 - `src/data/resume.ts`: education, degrees, work, research references, year
   ranges, and regional locations. `src/lib/resume-timeline.ts` derives the
   chronological entries. `src/components/resume/` supplies the linked map and

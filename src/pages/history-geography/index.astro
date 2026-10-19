@@ -1,0 +1,24 @@
+---
+import Base from '../../layouts/Base.astro';
+import { HISTORY_GEOGRAPHY_PROJECTS } from '../../data/history-geography';
+---
+
+<Base title="History & geography" description="History and geography games and small projects by Jerry Zhang.">
+  <h1 class="font-display text-[clamp(2.75rem,7vw,4.5rem)] font-bold tracking-[-0.04em]">History &amp; geography</h1>
+  <p class="mt-4 max-w-[38rem] text-muted">Games and small projects I make for fun.</p>
+
+  {HISTORY_GEOGRAPHY_PROJECTS.length > 0 ? (
+    <ul class="mt-14 border-t border-line">
+      {HISTORY_GEOGRAPHY_PROJECTS.map((project) => (
+        <li class="border-b border-line py-7">
+          <h2 class="text-xl leading-snug">
+            <a href={project.href} class="inline-flex min-h-11 items-center text-ink no-underline hover:text-accent">{project.name}</a>
+          </h2>
+          <p class="mt-1 max-w-[38rem] text-base text-muted">{project.description}</p>
+        </li>
+      ))}
+    </ul>
+  ) : (
+    <p class="mt-14 border-t border-line pt-8 text-muted">Nothing posted yet.</p>
+  )}
+</Base>

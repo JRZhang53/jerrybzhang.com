@@ -6,6 +6,7 @@ import { parse, type DefaultTreeAdapterTypes } from 'parse5';
 import { SITE } from '../src/data/site';
 import { PROJECTS } from '../src/data/projects';
 import { RESUME_ENTRIES } from '../src/lib/resume-timeline';
+import { renderMathText } from '../src/lib/math';
 
 type Node = DefaultTreeAdapterTypes.Node;
 type Element = DefaultTreeAdapterTypes.Element;
@@ -112,10 +113,12 @@ test('the complete resume and real project figures are available before JavaScri
     assert.ok(disclosure);
     assert.equal(disclosure.tagName, 'details');
     assert.equal(attr(disclosure, 'open'), undefined);
-    assert.ok(text(disclosure).includes(project.description), 'full descriptions remain available without JavaScript');
+    assert.ok(text(disclosure).includes(text(parse(renderMathText(project.description)))), 'full descriptions and math remain available without JavaScript');
   }
   const figures = projects.filter((node) => node.tagName === 'img');
-  assert.equal(figures.length, 2);
+  assert.ok(projects.some((node) => node.tagName === 'math'), 'project notation is rendered as accessible math before JavaScript');
+  assert.ok(!projects.some((node) => (attr(node, 'class') ?? '').includes('katex-error')));
+  assert.equal(figures.length, PROJECTS.filter((project) => 'figure' in project).length);
   for (const figure of figures) {
     assert.ok(attr(figure, 'alt'));
     assert.ok(existsSync(join(root, attr(figure, 'src')!)));
