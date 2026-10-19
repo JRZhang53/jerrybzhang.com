@@ -116,6 +116,12 @@ not selectable. The name and first phrase are visible before JavaScript.
 Holding an interest shows its full phrase and keeps the simulation running and
 interactive; resuming advances to the next interest. The separate Pause motion
 control freezes typing and the canvas; do not conflate these controls.
+Reduced motion starts still with an explanation and a visible Play animation
+control. Explicit playback opts into the canvas and typing for this page visit.
+On touch screens, a short tap applies a brief impulse after release; swipes,
+long presses, and canceled gestures do nothing. Never capture scrolling or
+require dragging a finger. Mouse hover remains continuous. The hero uses stable
+viewport height so mobile browser chrome does not repeatedly reset simulations.
 
 `interest-field/InterestField.tsx` owns canvas sizing, pointer events, theme
 colors, fades, and cleanup. `frame-loop.ts` independently gates frames on viewport

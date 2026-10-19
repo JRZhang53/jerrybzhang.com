@@ -1,13 +1,16 @@
 import { type ReactNode, useEffect, useRef } from 'react';
 import { cn } from '@/lib/utils';
-import { type Pointer, type Rgb, SIMS, type Sim, type SimKey } from './sims';
+import { type Rgb, SIMS, type Sim, type SimKey } from './sims';
 import { createFrameLoop } from './frame-loop';
+import { createPointerInput } from './pointer-input';
 
 interface InterestFieldProps {
   sim: SimKey;
   /** Changing this starts a fresh instance of the same sim (e.g. a new random graph). */
   variant?: number;
   paused?: boolean;
+  /** Explicit visitor opt-in, even when their system prefers reduced motion. */
+  allowMotion?: boolean;
   className?: string;
   /** Content shown over the simulation. */
   children?: ReactNode;
@@ -23,19 +26,21 @@ function accentColor(): Rgb {
 
 // A full-bleed canvas running one simulation at a time behind its children.
 // Switching `sim` (or `variant`) fades the old one out and the new one in.
-export default function InterestField({ sim, variant = 0, paused = false, className, children }: InterestFieldProps) {
+export default function InterestField({ sim, variant = 0, paused = false, allowMotion = false, className, children }: InterestFieldProps) {
   const rootRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const simRef = useRef<Sim | null>(null);
   const wantedRef = useRef(`${sim}:${variant}`);
   const kickRef = useRef<() => void>(() => {});
   const pausedRef = useRef(paused);
+  const allowMotionRef = useRef(allowMotion);
 
   useEffect(() => {
     wantedRef.current = `${sim}:${variant}`;
     pausedRef.current = paused;
+    allowMotionRef.current = allowMotion;
     kickRef.current();
-  }, [sim, variant, paused]);
+  }, [sim, variant, paused, allowMotion]);
 
   useEffect(() => {
     const root = rootRef.current;
@@ -44,7 +49,8 @@ export default function InterestField({ sim, variant = 0, paused = false, classN
     if (!(root && canvas && ctx)) return;
 
     const motionPreference = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const pointer: Pointer = { x: 0, y: 0, active: false };
+    const reducedMotion = () => motionPreference.matches && !allowMotionRef.current;
+    const input = createPointerInput((x, y) => simRef.current?.press?.(x, y));
     let color = accentColor();
     let width = 0;
     let height = 0;
@@ -61,6 +67,7 @@ export default function InterestField({ sim, variant = 0, paused = false, classN
     };
 
     const mount = (id: string) => {
+      input.cancel();
       shownKey = id;
       const next = SIMS[id.split(':')[0] as SimKey].create();
       next.resize(width, height);
@@ -73,7 +80,7 @@ export default function InterestField({ sim, variant = 0, paused = false, classN
     const sync = () => {
       const wanted = wantedRef.current;
       if (wanted === shownKey || fadingOut || !width) return;
-      if (!shownKey || motionPreference.matches || pausedRef.current) {
+      if (!shownKey || reducedMotion() || pausedRef.current) {
         mount(wanted);
         return;
       }
@@ -86,7 +93,8 @@ export default function InterestField({ sim, variant = 0, paused = false, classN
     };
 
     const clock = createFrameLoop((dt) => {
-      simRef.current?.step(dt, pointer);
+      simRef.current?.step(dt, input.pointer);
+      input.step(dt);
       paint();
     });
 
@@ -97,7 +105,8 @@ export default function InterestField({ sim, variant = 0, paused = false, classN
         mount(wantedRef.current);
       }
       sync();
-      clock.update({ documentVisible: !document.hidden, reducedMotion: motionPreference.matches, paused: pausedRef.current });
+      clock.update({ documentVisible: !document.hidden, reducedMotion: reducedMotion(), paused: pausedRef.current });
+      if (!clock.running()) input.cancel();
     };
     kickRef.current = play;
 
@@ -128,12 +137,11 @@ export default function InterestField({ sim, variant = 0, paused = false, classN
     });
     intersection.observe(root);
     const onVisibility = () => {
-      if (document.hidden) pointer.active = false;
       play();
     };
     document.addEventListener('visibilitychange', onVisibility);
     const onMotionChange = () => {
-      if (motionPreference.matches && fadingOut) {
+      if (reducedMotion() && fadingOut) {
         window.clearTimeout(fadeTimer);
         fadingOut = false;
         mount(wantedRef.current);
@@ -150,31 +158,28 @@ export default function InterestField({ sim, variant = 0, paused = false, classN
 
     const local = (event: PointerEvent) => {
       const rect = canvas.getBoundingClientRect();
-      pointer.x = event.clientX - rect.left;
-      pointer.y = event.clientY - rect.top;
+      return { id: event.pointerId, kind: event.pointerType, x: event.clientX - rect.left, y: event.clientY - rect.top, time: event.timeStamp };
     };
     const onMove = (event: PointerEvent) => {
-      local(event);
-      pointer.active = event.pointerType === 'mouse' || event.buttons > 0;
+      if (clock.running()) input.move(local(event));
     };
-    const onLeave = () => {
-      pointer.active = false;
+    // Touch pointers leave immediately after pointerup; keep that tap's impulse alive.
+    const onLeave = (event: PointerEvent) => {
+      if (event.pointerType === 'mouse') input.cancel();
     };
+    const onCancel = () => input.cancel();
     const onDown = (event: PointerEvent) => {
-      if ((event.target as HTMLElement).closest('a, button')) return;
-      local(event);
-      pointer.active = true;
-      simRef.current?.press?.(pointer.x, pointer.y);
-      if (!clock.running()) paint();
+      if (!event.isPrimary || (event.target as Element).closest('a, button') || !clock.running()) return;
+      input.down(local(event));
     };
     const onUp = (event: PointerEvent) => {
-      if (event.pointerType !== 'mouse') pointer.active = false;
+      if (clock.running()) input.up(local(event));
     };
     root.addEventListener('pointermove', onMove);
     root.addEventListener('pointerleave', onLeave);
     root.addEventListener('pointerdown', onDown);
     root.addEventListener('pointerup', onUp);
-    root.addEventListener('pointercancel', onLeave);
+    root.addEventListener('pointercancel', onCancel);
 
     return () => {
       clock.dispose();
@@ -189,7 +194,7 @@ export default function InterestField({ sim, variant = 0, paused = false, classN
       root.removeEventListener('pointerleave', onLeave);
       root.removeEventListener('pointerdown', onDown);
       root.removeEventListener('pointerup', onUp);
-      root.removeEventListener('pointercancel', onLeave);
+      root.removeEventListener('pointercancel', onCancel);
     };
   }, []);
 

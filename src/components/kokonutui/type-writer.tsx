@@ -50,6 +50,8 @@ interface TypewriterTitleProps {
    * stop the endless loop (WCAG 2.2.2). It also pauses while off screen.
    */
   paused?: boolean;
+  /** Explicit opt-in from a visible motion control. */
+  allowMotion?: boolean;
   /** Element to render, e.g. `h1` when it is the page title. */
   as?: TypewriterElement;
   /** Classes for the wrapper. Its width sets the font size. */
@@ -164,6 +166,7 @@ export default function TypewriterTitle({
   typos = false,
   seed = 7,
   paused = false,
+  allowMotion = false,
   as: Component = "div",
   className,
   textClassName,
@@ -176,7 +179,7 @@ export default function TypewriterTitle({
   const caretRef = useRef<HTMLSpanElement>(null);
   const isInView = useInView(ref);
   const isRunning = !paused && isInView;
-  const shouldReduceMotion = useReducedMotion();
+  const shouldReduceMotion = useReducedMotion(allowMotion);
   const position = useRef<Position>({ sequence: startAt, char: initialText ? sequences[startAt]?.text.length ?? 0 : 0, deleting: false });
   const random = useRef<() => number>(createRandom(seed));
 

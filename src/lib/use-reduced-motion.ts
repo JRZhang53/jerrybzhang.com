@@ -8,6 +8,7 @@ const subscribe = (notify: () => void) => {
 };
 
 /** A hydration-safe preference that also follows changes made while the page is open. */
-export function useReducedMotion() {
-  return useSyncExternalStore(subscribe, () => window.matchMedia(query).matches, () => false);
+export function useReducedMotion(allowMotion = false) {
+  const preference = useSyncExternalStore(subscribe, () => window.matchMedia(query).matches, () => false);
+  return preference && !allowMotion;
 }

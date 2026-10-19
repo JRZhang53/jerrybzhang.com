@@ -17,7 +17,8 @@ interface HeroProps {
 // The name rises, then the typewriter cycles through interests while the
 // background runs a matching simulation you can play with.
 export default function Hero({ name, lead, interests }: HeroProps) {
-  const reduce = useReducedMotion();
+  const [allowMotion, setAllowMotion] = useState(false);
+  const reduce = useReducedMotion(allowMotion);
   const [index, setIndex] = useState(0);
   const [ready, setReady] = useState(false);
   const [motionPaused, setMotionPaused] = useState(false);
@@ -42,7 +43,7 @@ export default function Hero({ name, lead, interests }: HeroProps) {
   };
 
   return (
-    <InterestField className="min-h-[clamp(440px,64vh,640px)]" sim={sim} variant={cycle} paused={motionPaused}>
+    <InterestField className="min-h-[clamp(440px,64svh,640px)]" sim={sim} variant={cycle} paused={motionPaused} allowMotion={allowMotion}>
       <div className="relative mx-auto w-full max-w-5xl px-5 text-ink sm:px-8">
         <h1
           className="hero-name font-display text-[clamp(3.25rem,11vw,7.5rem)] font-bold leading-[0.92] tracking-[-0.04em]"
@@ -65,6 +66,7 @@ export default function Hero({ name, lead, interests }: HeroProps) {
               startAt={run.startAt}
               initialText={run.id === 0}
               paused={motionPaused}
+              allowMotion={allowMotion}
               startDelay={run.id === 0 ? 1400 : 250}
               textClassName="text-ink text-[length:inherit] leading-snug @lg:text-[length:inherit] @2xl:text-[length:inherit]"
               typingSpeed={50}
@@ -84,11 +86,17 @@ export default function Hero({ name, lead, interests }: HeroProps) {
               key={sim}
               transition={{ duration: reduce || motionPaused ? 0 : 0.3 }}
             >
-              {SIMS[sim].caption}
+              {reduce ? 'Motion is off to match your device settings.' : motionPaused ? 'Motion paused.' : (
+                <>
+                  <span className="[@media(hover:none)]:hidden">{SIMS[sim].caption}</span>
+                  <span className="hidden [@media(hover:none)]:inline">{SIMS[sim].touchCaption}</span>
+                </>
+              )}
             </motion.p>
           </AnimatePresence>
-          {ready && !reduce && interests.length > 0 && (
+          {ready && interests.length > 0 && (
             <div className="flex shrink-0 self-end items-center gap-1">
+            {!reduce && (
             <button
               aria-label={paused ? 'Move on to the next interest' : 'Stay on this interest'}
               aria-pressed={paused}
@@ -99,13 +107,19 @@ export default function Hero({ name, lead, interests }: HeroProps) {
             >
               {paused ? <Play size={13} strokeWidth={2.5} /> : <Pause size={13} strokeWidth={2.5} />}
             </button>
+            )}
             <button
-              aria-pressed={motionPaused}
+              aria-pressed={motionPaused || reduce}
               className="min-h-11 cursor-pointer rounded-md px-2 font-display text-xs text-muted transition-colors hover:bg-line/60 hover:text-ink"
-              onClick={() => setMotionPaused((value) => !value)}
+              onClick={() => {
+                if (reduce) {
+                  setAllowMotion(true);
+                  setMotionPaused(false);
+                } else setMotionPaused((value) => !value);
+              }}
               type="button"
             >
-              {motionPaused ? 'Resume motion' : 'Pause motion'}
+              {reduce ? 'Play animation' : motionPaused ? 'Resume motion' : 'Pause motion'}
             </button>
             </div>
           )}
