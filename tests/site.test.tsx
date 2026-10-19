@@ -96,6 +96,8 @@ test('the complete resume and real project figures are available before JavaScri
   for (const entry of RESUME_ENTRIES) {
     const article = resume.find((node) => attr(node, 'id') === entry.id);
     assert.ok(article, `missing resume entry ${entry.id}`);
+    assert.equal(article.tagName, 'details', 'resume entries must work as native disclosures without JavaScript');
+    assert.equal(attr(article, 'open'), undefined, 'resume details start collapsed');
     assert.ok(text(article).includes(entry.org));
     assert.ok(text(article).includes(entry.years));
   }
@@ -105,6 +107,13 @@ test('the complete resume and real project figures are available before JavaScri
     assert.doesNotMatch(text(title), /<!--/);
   }
   const projects = elements(parse(read(join(root, 'projects/index.html'))));
+  for (const project of PROJECTS) {
+    const disclosure = projects.find((node) => attr(node, 'id') === project.id);
+    assert.ok(disclosure);
+    assert.equal(disclosure.tagName, 'details');
+    assert.equal(attr(disclosure, 'open'), undefined);
+    assert.ok(text(disclosure).includes(project.description), 'full descriptions remain available without JavaScript');
+  }
   const figures = projects.filter((node) => node.tagName === 'img');
   assert.equal(figures.length, 2);
   for (const figure of figures) {

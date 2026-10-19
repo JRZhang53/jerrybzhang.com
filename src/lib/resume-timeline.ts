@@ -1,4 +1,4 @@
-import { EDUCATION, EXPERIENCE, RESEARCH, type LocationId } from '../data/resume';
+import { EDUCATION, EXPERIENCE, RESEARCH, type LocationId, type DatedPeriod } from '../data/resume';
 import type { ProjectId } from '../data/projects';
 
 export type ResumeEntry = {
@@ -9,14 +9,11 @@ export type ResumeEntry = {
   years: string;
   place: string;
   location: LocationId;
-  start?: number;
-  end?: number;
   upcoming?: boolean;
   points?: string[];
   studies?: boolean;
   project?: ProjectId;
-};
-export type YearSelection = 'all' | 'upcoming' | number;
+} & Partial<DatedPeriod>;
 
 export const RESUME_ENTRIES: ResumeEntry[] = [
   ...EDUCATION.map((e): ResumeEntry => ({ ...e, category: 'Education', org: e.school,
@@ -26,26 +23,18 @@ export const RESUME_ENTRIES: ResumeEntry[] = [
     location: e.location, place: e.place }))),
   ...RESEARCH.map((e): ResumeEntry => ({ ...e, category: 'Research', role: e.title })),
 ].sort((a, b) => Number(!!b.upcoming) - Number(!!a.upcoming)
-  || (b.start ?? 0) - (a.start ?? 0) || (b.end ?? 0) - (a.end ?? 0));
+  || ((b.start ?? 0) * 12 + (b.startMonth ?? 0)) - ((a.start ?? 0) * 12 + (a.startMonth ?? 0)));
 
 export const FIRST_YEAR = Math.min(...RESUME_ENTRIES.flatMap((e) => e.start === undefined ? [] : [e.start]));
 export const LAST_YEAR = Math.max(...RESUME_ENTRIES.flatMap((e) => e.end === undefined ? [] : [e.end]));
 export const YEARS = Array.from({ length: LAST_YEAR - FIRST_YEAR + 1 }, (_, i) => FIRST_YEAR + i);
 
-export function activeInYear(entry: ResumeEntry, year: YearSelection): boolean {
-  if (year === 'all') return true;
-  if (year === 'upcoming') return !!entry.upcoming;
-  return !entry.upcoming && entry.start !== undefined && entry.end !== undefined
-    && entry.start <= year && entry.end >= year;
-}
-
-/** Inclusive calendar years only: do not imply invented month-level dates. */
+/** Inclusive calendar months; year labels mark equal twelve-month columns. */
 export function durationRange(entry: ResumeEntry) {
-  if (entry.upcoming || entry.start === undefined || entry.end === undefined) return null;
-  return { left: (entry.start - FIRST_YEAR) / YEARS.length * 100,
-    width: (entry.end - entry.start + 1) / YEARS.length * 100 };
-}
-
-export function availableLocations(year: YearSelection): LocationId[] {
-  return [...new Set(RESUME_ENTRIES.filter((e) => activeInYear(e, year)).map((e) => e.location))];
+  if (entry.upcoming || entry.start === undefined || entry.end === undefined
+    || entry.startMonth === undefined || entry.endMonth === undefined) return null;
+  const start = (entry.start - FIRST_YEAR) * 12 + entry.startMonth - 1;
+  const end = (entry.end - FIRST_YEAR) * 12 + entry.endMonth;
+  return { left: start / (YEARS.length * 12) * 100,
+    width: (end - start) / (YEARS.length * 12) * 100 };
 }

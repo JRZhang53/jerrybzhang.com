@@ -43,8 +43,23 @@ instructions take precedence.
 - The expandable degree breakdown belongs under Harvard on Resume: Physics AB
   plus concurrent AM, Statistics AB with ML track, CS secondary. Minnesota is
   PSEO dual enrollment.
-- Resume research and course entries link individually to project anchors;
+- Resume research entries link individually to project anchors;
   descriptions are maintained on Projects.
+- Keep Resume and Projects minimal at first glance. Use aligned Gantt-style
+  resume bars and native expandable rows; show descriptions, figures, degree
+  breakdowns, and the optional map only when requested. Avoid year-filter
+  toolbars, counts, topic tags, and repeated labels. Project deep links must
+  automatically expand their destination.
+- Resume uses one chart for education, experience, and research directly tied
+  to an experience (NASA, Kaxiras, Stony Brook). Standalone course projects
+  belong only on Projects. Color by type (cobalt experience, teal education,
+  purple research), with no invented duration. Keep full
+  role and date text available on expansion and to screen readers. On mobile,
+  scroll the chart horizontally while keeping its row labels visible.
+- Use the confirmed month ranges in `src/data/resume.ts` for Gantt geometry,
+  including the ending month. Do not round summer roles to whole years.
+  Harvard begins September 2023 and is expected to end May 2027; teaching runs
+  August 2024–May 2026. Date provenance is in `docs/resume-map-and-figures.md`.
 
 ## Architecture and editing map
 
@@ -59,7 +74,7 @@ instructions take precedence.
 - `src/data/resume.ts`: education, degrees, work, research references, year
   ranges, and regional locations. `src/lib/resume-timeline.ts` derives the
   chronological entries. `src/components/resume/` supplies the linked map and
-  timeline with year selection, mobile disclosure, and keyboard interaction.
+  timeline with native entry disclosure, an optional map, and keyboard interaction.
   All entries remain server rendered. A PDF at `public/resume.pdf` adds a
   download; it no longer replaces the HTML resume. Print styles expand degrees
   and hide controls. See `docs/resume-map-and-figures.md` for date precision,
@@ -193,8 +208,8 @@ October 18, 2026. Before this file was added the working tree was clean.
   touch test, cross-browser audit, or measured Core Web Vitals improvement.
 - There is no resume PDF, profile photo, populated email link, published
   pickleball post, or side project yet. These are content slots, not build errors.
-- Stony Brook research is dated 2022 on Resume and its project is dated 2023.
-  These may represent different milestones; confirm before changing either.
+- The supplied resume sources resolve the old research date discrepancies:
+  Stony Brook runs June 2022–March 2023, and Kaxiras January–August 2024.
 - `fun-ideas/` is ignored now, but was tracked in commit `4a66a8b` and removed
   from the current tree in `92962d3`. Ignoring it does not remove historical
   versions. Do not expose its contents or rewrite history without a specific
